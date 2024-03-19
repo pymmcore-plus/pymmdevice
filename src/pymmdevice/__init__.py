@@ -1,5 +1,4 @@
-"""wrapper around MMDevice"""
-
+"""wrapper around MMDevice."""
 from importlib.metadata import PackageNotFoundError, version
 
 try:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import pkg._core as m
+import pymmdevice._core as m
 
 
 def test_add():

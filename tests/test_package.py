@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import importlib.metadata
 
-import pkg as m
+import pymmdevice._core as m
 
 
 def test_version():
