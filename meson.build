@@ -1,5 +1,5 @@
 project(
-    'pkg',
+    'pymmdevice',
     'cpp',
     version: '0.1.0',
     license: 'BSD',
@@ -14,9 +14,9 @@ pybind11_dep = dependency('pybind11')
 
 py.extension_module('_core',
     'src/main.cpp',
-    subdir: 'pkg',
+    subdir: 'pymmdevice',
     install: true,
     dependencies : [pybind11_dep],
 )
 
-install_subdir('src/pkg', install_dir: py.get_install_dir() / 'pkg', strip_directory: true)
+install_subdir('src/pymmdevice', install_dir: py.get_install_dir() / 'pymmdevice', strip_directory: true)
