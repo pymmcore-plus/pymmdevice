@@ -1,7 +1,6 @@
-# https://peps.python.org/pep-0517/
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
-build-backend = "hatchling.build"
+requires = ["meson-python", "pybind11"]
+build-backend = "mesonpy"
 
 # https://hatch.pypa.io/latest/config/metadata/
 [tool.hatch.version]
