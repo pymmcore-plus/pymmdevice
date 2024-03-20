@@ -195,7 +195,7 @@ class PluginManager:
 
         if module_name not in self._module_map:
             fname = self.find(f"{self.lib_prefix}{module_name}{self.lib_suffix}")
-            print(fname)
+            print(module_name, fname)
             self._module_map[module_name] = LoadedDeviceAdapter(module_name, fname)
 
         return self._module_map[module_name]
@@ -203,9 +203,9 @@ class PluginManager:
 
 if __name__ == "__main__":
     pm = PluginManager(
-        ["~/Library/Application Support/pymmcore-plus/mm/Micro-Manager-258aa5ac8/"]
+        ["~/Library/Application Support/pymmcore-plus/mm/Micro-Manager-80d5ac1/"]
     )
 
     da = pm.get_device_adapter("DemoCamera")
-    print(da)
-    print(da.get_available_device_names())
+    # print(da)
+    # print(da.get_available_device_names())

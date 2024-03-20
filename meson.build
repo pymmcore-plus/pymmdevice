@@ -25,8 +25,20 @@ foreach dir : include_dirs_list
     message('Including: ' + dir)
 endforeach
 
+# all necessary CPP files
+cpp_sources = ['src/_core.cpp']
+print_sources = '''
+import pathlib
+m = pathlib.Path('extern/mmCoreAndDevices')
+sources = (*(m/'MMDevice').rglob('*.cpp'), *(m/'MMCore').rglob('*.cpp'))
+print(';'.join({str(x) for x in sources if 'unittest' not in str(x)}))
+'''
+cpp_sources += run_command(py.full_path(), '-c', print_sources, check: true).stdout().strip().split(';')
+
+
+
 py.extension_module('_core',
-    'src/_core.cpp',
+    files(cpp_sources),
     subdir: 'pymmdevice',
     install: true,
     dependencies : [pybind11_dep],
@@ -36,3 +48,4 @@ py.extension_module('_core',
 
 # install the Python package into the site-packages directory
 install_subdir('src/pymmdevice', install_dir: py.get_install_dir() / 'pymmdevice', strip_directory: true)
+
