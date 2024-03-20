@@ -1,0 +1,3 @@
+[submodule "extern/mmCoreAndDevices"]
+	path = extern/mmCoreAndDevices
+	url = https://github.com/micro-manager/mmCoreAndDevices

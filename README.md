@@ -7,3 +7,13 @@
 [![codecov](https://codecov.io/gh/tlambert03/pymmdevice/branch/main/graph/badge.svg)](https://codecov.io/gh/tlambert03/pymmdevice)
 
 wrapper around MMDevice
+
+## Dev
+
+editable install (must be done without build isolation to work with meson)
+compiled files end up in `build/` directory
+
+```sh
+pip install meson-python ninja pybind11
+pip install -e . --no-build-isolation --force-reinstall
+```

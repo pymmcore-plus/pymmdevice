@@ -113,9 +113,9 @@ class LoadedDeviceAdapter:
         """Return the device interface version."""
         return self._module.GetDeviceInterfaceVersion()  # type: ignore
 
-    def load_device(self, name: str) -> DeviceInstance:
-        """Load a device."""
-        # creates a DeviceInstance subclass based on the device type
+    # def load_device(self, name: str) -> DeviceInstance:
+    # """Load a device."""
+    # creates a DeviceInstance subclass based on the device type
 
     def create_device(self, name: str) -> c_void_p:
         """Create a device by name."""
@@ -202,7 +202,6 @@ class PluginManager:
 
 
 if __name__ == "__main__":
-
     pm = PluginManager(
         ["~/Library/Application Support/pymmcore-plus/mm/Micro-Manager-258aa5ac8/"]
     )
