@@ -2,9 +2,9 @@
 #include <pybind11/stl.h>  // For automatic conversion between C++ and Python containers
 
 #include "DeviceInstance.h"
-#include "StateInstance.h"
 #include "LoadedDeviceAdapter.h"
 #include "MMCore.h"
+#include "StateInstance.h"
 namespace py = pybind11;
 
 // Minimal mock class
@@ -15,28 +15,28 @@ class MockCMMCore : public CMMCore {
 };
 
 PYBIND11_MODULE(_core, m) {
-//   py::class_<DeviceInstance, std::shared_ptr<DeviceInstance>>(m, "DeviceInstance",
-//                                                               py::module_local())
-//       .def("get_adapter_module", &DeviceInstance::GetAdapterModule)
-//       .def("get_label", &DeviceInstance::GetLabel)
-//       .def("get_description", &DeviceInstance::GetDescription)
-//       .def("set_description", &DeviceInstance::SetDescription)
-//       .def("get_raw_ptr", &DeviceInstance::GetRawPtr, py::return_value_policy::reference)
-//       .def("log_message", &DeviceInstance::LogMessage)
-//       .def("is_initialized", &DeviceInstance::IsInitialized)
-//       .def("has_initialization_been_attempted", &DeviceInstance::HasInitializationBeenAttempted)
-//       .def_property_readonly("label", &DeviceInstance::GetLabel)
-//       .def_property("description", &DeviceInstance::GetDescription,
-//                     &DeviceInstance::SetDescription);
+  //   py::class_<DeviceInstance, std::shared_ptr<DeviceInstance>>(m, "DeviceInstance",
+  //                                                               py::module_local())
+  //       .def("get_adapter_module", &DeviceInstance::GetAdapterModule)
+  //       .def("get_label", &DeviceInstance::GetLabel)
+  //       .def("get_description", &DeviceInstance::GetDescription)
+  //       .def("set_description", &DeviceInstance::SetDescription)
+  //       .def("get_raw_ptr", &DeviceInstance::GetRawPtr, py::return_value_policy::reference)
+  //       .def("log_message", &DeviceInstance::LogMessage)
+  //       .def("is_initialized", &DeviceInstance::IsInitialized)
+  //       .def("has_initialization_been_attempted",
+  //       &DeviceInstance::HasInitializationBeenAttempted) .def_property_readonly("label",
+  //       &DeviceInstance::GetLabel) .def_property("description", &DeviceInstance::GetDescription,
+  //                     &DeviceInstance::SetDescription);
 
   py::class_<StateInstance, std::shared_ptr<StateInstance>>(m, "StateInstance");
-     //  .def("set_position", &StateInstance::SetPosition)
-     //  .def("get_position", &StateInstance::GetPosition)
-     //  .def("get_position_label", &StateInstance::GetPositionLabel)
-     //  .def("set_position_label", &StateInstance::SetPositionLabel)
-     //  .def("get_number_of_positions", &StateInstance::GetNumberOfPositions)
-     //  .def("set_gate_open", &StateInstance::SetGateOpen)
-     //  .def("get_gate_open", &StateInstance::GetGateOpen);
+  //  .def("set_position", &StateInstance::SetPosition)
+  //  .def("get_position", &StateInstance::GetPosition)
+  //  .def("get_position_label", &StateInstance::GetPositionLabel)
+  //  .def("set_position_label", &StateInstance::SetPositionLabel)
+  //  .def("get_number_of_positions", &StateInstance::GetNumberOfPositions)
+  //  .def("set_gate_open", &StateInstance::SetGateOpen)
+  //  .def("get_gate_open", &StateInstance::GetGateOpen);
 
   py::class_<LoadedDeviceAdapter, std::shared_ptr<LoadedDeviceAdapter>>(m, "LoadedDeviceAdapter")
       .def(py::init<const std::string &, const std::string &>())
