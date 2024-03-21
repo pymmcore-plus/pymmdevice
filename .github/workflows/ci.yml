@@ -12,6 +12,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # we can't use check-manifest because meson dist
+  # only supports git directories
+  # so we build the sdist, untar it, and build the wheel
   check-sdist-buildable:
     runs-on: ubuntu-latest
     steps:
@@ -20,9 +23,7 @@ jobs:
           fetch-depth: 0
           submodules: recursive
       - run: |
-          # we can't use check-manifest because meson dist
-          # only supports git directories
-          # so we build the sdist, untar it, and build the wheel
+          pip install build 
           python -m build --sdist
           cd dist
           tar -xzvf pymmdevice-*.tar.gz
