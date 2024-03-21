@@ -12,11 +12,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check-manifest:
+  check-sdist-buildable:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: pipx run check-manifest
+        with:
+          fetch-depth: 0
+          submodules: recursive
+      - run: |
+          # we can't use check-manifest because meson dist
+          # only supports git directories
+          # so we build the sdist, untar it, and build the wheel
+          python -m build --sdist
+          cd dist
+          tar -xzvf pymmdevice-*.tar.gz
+          cd $(ls -d pymmdevice-*/ | head -n 1)
+          python -m build --wheel
 
   test:
     name: ${{ matrix.platform }} (${{ matrix.python-version }})
