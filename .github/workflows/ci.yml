@@ -56,8 +56,14 @@ jobs:
           key: ${{ runner.os }}-mmbuild-${{ hashFiles('src/pymmcore_plus/_build.py') }}
 
       - name: Build Micro-Manager
+        shell: bash
         if: steps.cache-mm-build.outputs.cache-hit != 'true'
-        run: mmcore build-dev DemoCamera
+        run: |
+          # if running on macos
+          if [[ ${{ matrix.platform }} == 'macos-latest' ]]; then
+            brew install autoconf automake libtool boost pkg-config autoconf-archive
+          fi
+          mmcore build-dev DemoCamera
 
       - name: 🧪 Run Tests
         run: pytest --color=yes --cov --cov-report=xml --cov-report=term-missing
