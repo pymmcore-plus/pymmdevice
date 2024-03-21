@@ -73,7 +73,7 @@ This means you must also install the build dependencies manually
 before running `pip install -e .`
 
 ```sh
-pip install meson-python meson ninja pybind11  # build deps
+pip install meson-python meson ninja pybind11
 pip install -e ".[dev]" --no-build-isolation
 ```
 
@@ -106,13 +106,23 @@ wrapper and simply re-run the tests without re-installing.
 
 ### Troubleshooting
 
-After the initial install, one problem that can arise occasionally is a stale
+- `ERROR: File  does not exist.` when building or running `pip install -e .`
+
+    You likely didn't initialize the submodules when you cloned the repo.  Run:
+
+    ```sh
+    git submodule update --init --recursive
+    ```
+
+- General Reset
+
+    After the initial install, one problem that can arise occasionally is a stale
 `build/` directory.  If you encounter errors during the build process, try
 removing the `build/` directory and re-installing.
 
-```sh
-rm -rf build && pip install -e . --no-build-isolation --force-reinstall
-```
+    ```sh
+    rm -rf build && pip install -e . --no-build-isolation --force-reinstall
+    ```
 
 ### Generating type stubs
 
