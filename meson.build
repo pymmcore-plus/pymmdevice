@@ -36,14 +36,13 @@ print(';'.join({str(x) for x in sources if 'unittest' not in str(x)}))
 cpp_sources += run_command(py.full_path(), '-c', print_sources, check: true).stdout().strip().split(';')
 
 
-
 py.extension_module('_pymmdevice',
     files(cpp_sources),
     subdir: 'pymmdevice',
     install: true,
     dependencies : [pybind11_dep],
     include_directories: include_dirs,
-    cpp_args: ['-DMMDEVICE_CLIENT_BUILD'],
+    cpp_args: ['-DMMDEVICE_CLIENT_BUILD', '-g'],  # TODO: remove -g
 )
 
 # install the Python package into the site-packages directory

@@ -2,6 +2,8 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>  // For automatic conversion between C++ and Python containers
 
+#include <iostream>
+
 #include "AutoFocusInstance.h"
 #include "CameraInstance.h"
 #include "DeviceInstance.h"
@@ -30,6 +32,9 @@ class MockCMMCore : public CMMCore {
   // You might not need to implement anything if LoadDevice truly does nothing with it
 };
 
+// Define a holder type for DeviceInstance
+using DeviceInstanceHolder = std::shared_ptr<DeviceInstance>;
+
 template <typename DeviceInstanceType>
 py::class_<DeviceInstanceType, std::shared_ptr<DeviceInstanceType>> bindDeviceInstance(
     py::module_ &m, const std::string &pythonClassName) {
@@ -44,8 +49,23 @@ py::class_<DeviceInstanceType, std::shared_ptr<DeviceInstanceType>> bindDeviceIn
       }));
 }
 
+// Standalone function to replace the lambda
+auto loadDeviceFunction = [](LoadedDeviceAdapter &self, const std::string &name,
+                             const std::string &label) -> std::shared_ptr<DeviceInstance> {
+  MockCMMCore mockCore;
+  mm::logging::internal::GenericLogger<mm::logging::EntryData> deviceLogger(0);
+  mm::logging::internal::GenericLogger<mm::logging::EntryData> coreLogger(0);
+  return self.LoadDevice(&mockCore, name, label, deviceLogger, coreLogger);
+};
+
 PYBIND11_MODULE(_pymmdevice, m) {
   bindDeviceInstance<CameraInstance>(m, "CameraInstance")
+      .def("__enter__",
+           [](CameraInstance &self) -> CameraInstance & {
+             self.Initialize();
+             return self;
+           })
+      .def("__exit__", [](CameraInstance &self, py::args args) -> void { self.Shutdown(); })
       .def("SnapImage", &CameraInstance::SnapImage)
       .def("GetNumberOfComponents", &CameraInstance::GetNumberOfComponents)
       .def("GetComponentName", &CameraInstance::GetComponentName)
@@ -150,13 +170,25 @@ PYBIND11_MODULE(_pymmdevice, m) {
            static_cast<std::string (LoadedDeviceAdapter::*)(const std::string &) const>(
                &LoadedDeviceAdapter::GetDeviceDescription),
            py::arg("deviceName"))
+      .def("load_device", loadDeviceFunction, py::arg("name"), py::arg("label"),
+           py::return_value_policy::automatic)
+      // the following methods simply call load_device internally, but ensure
+      // that the return type is the correct DeviceInstance subclass
       .def(
-          "load_device",
-          [](LoadedDeviceAdapter &self, const std::string &name, const std::string &label) {
-            MockCMMCore mockCore;
-            mm::logging::internal::GenericLogger<mm::logging::EntryData> deviceLogger(0);
-            mm::logging::internal::GenericLogger<mm::logging::EntryData> coreLogger(0);
-            return self.LoadDevice(&mockCore, name, label, deviceLogger, coreLogger);
+          "load_camera",
+          [](LoadedDeviceAdapter &self, const std::string &name,
+             const std::string &label) -> std::shared_ptr<CameraInstance> {
+            auto device = loadDeviceFunction(self, name, label);
+            std::shared_ptr<DeviceInstance> deviceHolder(device);
+            std::shared_ptr<CameraInstance> camera =
+                std::dynamic_pointer_cast<CameraInstance>(deviceHolder);
+            if (!camera) {
+              std::ostringstream msg;
+              msg << "'" << name << "' is not a CameraInstance";
+              PyErr_SetString(PyExc_TypeError, msg.str().c_str());
+              throw py::error_already_set();
+            }
+            return camera;
           },
           py::arg("name"), py::arg("label"), py::return_value_policy::automatic);
 }
