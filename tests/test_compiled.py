@@ -1,15 +1,22 @@
 from __future__ import annotations
 
-import pymmdevice._core as m
+from typing import cast
+
+from pymmcore_plus import find_micromanager
+
+import pymmdevice._pymmdevice as m
 
 
 def test_loaded_dev() -> None:
-    a = m.LoadedDeviceAdapter(
-        "DemoCamera",
-        "/Users/talley/Library/Application Support/pymmcore-plus/"
-        "mm/Micro-Manager-80d5ac1/libmmgr_dal_DemoCamera",
-    )
-    print(a.get_available_device_names())
-    print(a.get_device_description("DCam"))
+    pm = m.CPluginManager()
+    pm.SetSearchPaths([find_micromanager()])
+    a = pm.GetDeviceAdapter("DemoCamera")
 
-    print(a.load_device("DCam", "MyCamera"))
+    assert "DCam" in a.get_available_device_names()
+    assert a.get_device_description("DCam") == "Demo camera"
+
+    cam = cast(m.CameraInstance, a.load_device("DCam", "MyCamera"))
+    cam.Initialize()
+    assert cam.GetBinning() == 1
+    cam.SetBinning(2)
+    assert cam.GetBinning() == 2

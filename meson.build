@@ -26,7 +26,7 @@ foreach dir : include_dirs_list
 endforeach
 
 # all necessary CPP files
-cpp_sources = ['src/_core.cpp']
+cpp_sources = ['src/_pymmdevice_wrap.cpp']
 print_sources = '''
 import pathlib
 m = pathlib.Path('extern/mmCoreAndDevices')
@@ -37,7 +37,7 @@ cpp_sources += run_command(py.full_path(), '-c', print_sources, check: true).std
 
 
 
-py.extension_module('_core',
+py.extension_module('_pymmdevice',
     files(cpp_sources),
     subdir: 'pymmdevice',
     install: true,

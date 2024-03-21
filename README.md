@@ -17,4 +17,5 @@ compiled files end up in `build/` directory
 pip install meson-python ninja pybind11
 rm -rf build  # common problem
 pip install -e . --no-build-isolation --force-reinstall
+pybind11-stubgen pymmdevice._pymmdevice -o src
 ```
