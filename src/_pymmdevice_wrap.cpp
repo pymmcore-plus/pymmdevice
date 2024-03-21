@@ -8,7 +8,7 @@
 #include "GenericInstance.h"
 #include "HubInstance.h"
 #include "ImageProcessorInstance.h"
-#include "LoadedDeviceAdapter.h"
+#include "LoadableModules/LoadedDeviceAdapter.h"
 #include "MMCore.h"
 #include "MagnifierInstance.h"
 #include "PluginManager.h"
