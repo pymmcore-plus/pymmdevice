@@ -1,10 +1,10 @@
 # pymmdevice
 
-[![License](https://img.shields.io/pypi/l/pymmdevice.svg?color=green)](https://github.com/tlambert03/pymmdevice/raw/main/LICENSE)
+[![License](https://img.shields.io/pypi/l/pymmdevice.svg?color=green)](https://github.com/pymmcore-plus/pymmdevice/raw/main/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/pymmdevice.svg?color=green)](https://pypi.org/project/pymmdevice)
 [![Python Version](https://img.shields.io/pypi/pyversions/pymmdevice.svg?color=green)](https://python.org)
-[![CI](https://github.com/tlambert03/pymmdevice/actions/workflows/ci.yml/badge.svg)](https://github.com/tlambert03/pymmdevice/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/tlambert03/pymmdevice/branch/main/graph/badge.svg)](https://codecov.io/gh/tlambert03/pymmdevice)
+[![CI](https://github.com/pymmcore-plus/pymmdevice/actions/workflows/ci.yml/badge.svg)](https://github.com/pymmcore-plus/pymmdevice/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/pymmcore-plus/pymmdevice/branch/main/graph/badge.svg)](https://codecov.io/gh/pymmcore-plus/pymmdevice)
 
 Direct, low-level control of Micro-Manager device adapters in Python.
 
@@ -44,7 +44,7 @@ pip install pymmdevice
 ### Clone the repo and initialize the submodules
 
 ```sh
-git clone https://github.com/tlambert03/pymmdevice.git --recurse-submodules
+git clone https://github.com/pymmcore-plus/pymmdevice.git --recurse-submodules
 cd pymmdevice
 ```
 

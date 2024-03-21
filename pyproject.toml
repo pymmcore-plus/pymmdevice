@@ -43,8 +43,8 @@ dev = [
 ]
 
 [project.urls]
-homepage = "https://github.com/tlambert03/pymmdevice"
-repository = "https://github.com/tlambert03/pymmdevice"
+homepage = "https://github.com/pymmcore-plus/pymmdevice"
+repository = "https://github.com/pymmcore-plus/pymmdevice"
 
 # https://docs.astral.sh/ruff
 [tool.ruff]
