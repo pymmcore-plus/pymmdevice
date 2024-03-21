@@ -8,3 +8,5 @@ except PackageNotFoundError:
     __version__ = "uninstalled"
 __author__ = "Talley Lambert"
 __email__ = "talley.lambert@example.com"
+
+from ._pymmdevice import *  # noqa: F403

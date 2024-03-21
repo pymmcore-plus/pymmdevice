@@ -1,7 +1,10 @@
 import os
 from contextlib import suppress
+from typing import Iterator
 
 import pytest
+
+import pymmdevice as pmmd
 
 os.environ["MESONPY_EDITABLE_VERBOSE"] = "1"
 
@@ -23,3 +26,10 @@ def mm_lib_dir() -> str:
         "containing the Micro-Manager libraries, or\n`pip install pymmcore-plus` and "
         "run `mmcore build-dev`."
     )
+
+
+@pytest.fixture
+def pm(mm_lib_dir: str) -> Iterator[pmmd.CPluginManager]:
+    pm = pmmd.CPluginManager()
+    pm.SetSearchPaths([mm_lib_dir])
+    yield pm

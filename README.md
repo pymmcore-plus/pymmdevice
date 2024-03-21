@@ -27,7 +27,7 @@ would call `loadDevice('MyLabel', 'ModuleName', 'DeviceName')`.  All control of
 the device is routed through the `CMMCore` instance, and is therefore subject to
 the `CMMCores` model and API.
 
-This library is an experimental lower-level wrapper around the MMDevice API that
+This library is an **experimental** lower-level wrapper around the MMDevice API that
 gives you *direct* control over device adapter libraries, without going through
 core.  This means that you could have nothing more than a single compiled device
 adapter (i.e. one of the `libmmgr_dal_` libraries that you find inside of the

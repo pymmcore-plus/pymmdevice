@@ -1,3 +1,4 @@
+#include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>  // For automatic conversion between C++ and Python containers
 
@@ -60,7 +61,55 @@ PYBIND11_MODULE(_pymmdevice, m) {
       .def("SetBinning", &CameraInstance::SetBinning)
       .def("SetExposure", &CameraInstance::SetExposure)
       .def("GetExposure", &CameraInstance::GetExposure)
-      .def("Initialize", &CameraInstance::Initialize);
+      .def("Initialize", &CameraInstance::Initialize)
+      .def("Shutdown", &CameraInstance::Shutdown)
+      .def("GetImageBuffer", static_cast<const unsigned char *(CameraInstance::*)()>(
+                                 &CameraInstance::GetImageBuffer))
+      .def("GetImageBuffer", static_cast<const unsigned char *(CameraInstance::*)(unsigned)>(
+                                 &CameraInstance::GetImageBuffer))
+      .def("GetImageArray",
+           [](CameraInstance &self, py::args args) {
+             // Infer the shape and type of the numpy array from the camera instance
+             unsigned height = self.GetImageHeight();
+             unsigned width = self.GetImageWidth();
+             unsigned bytesPerPixel = self.GetImageBytesPerPixel();
+             py::dtype dtype;
+             switch (bytesPerPixel) {
+               case 1:
+                 dtype = py::dtype::of<uint8_t>();
+                 break;
+               case 2:
+                 dtype = py::dtype::of<uint16_t>();
+                 break;
+               case 4:
+                 dtype = py::dtype::of<uint32_t>();
+                 break;
+               case 8:
+                 dtype = py::dtype::of<uint64_t>();
+                 break;
+               default:
+                 throw std::runtime_error("Unsupported bytes per pixel");
+             }
+
+             // Assuming the buffer size is height * width * bytesPerPixel
+             size_t size = height * width * bytesPerPixel;
+             const unsigned char *buffer = args.size() == 0
+                                               ? self.GetImageBuffer()
+                                               : self.GetImageBuffer(args[0].cast<unsigned>());
+
+             // Ensure shape and strides are explicitly defined as vectors
+             std::vector<ssize_t> shape = {static_cast<ssize_t>(height),
+                                           static_cast<ssize_t>(width)};
+             std::vector<ssize_t> strides = {static_cast<ssize_t>(width * bytesPerPixel),
+                                             static_cast<ssize_t>(bytesPerPixel)};
+
+             return py::array(dtype, shape, strides, buffer);
+
+             // Create a NumPy array that shares the buffer without copying
+             // return py::array(dtype, {height, width}, {width * bytesPerPixel, bytesPerPixel},
+             // buffer);
+           })
+      .def("SnapImage", &CameraInstance::SnapImage);
 
   bindDeviceInstance<ShutterInstance>(m, "ShutterInstance");
   bindDeviceInstance<StageInstance>(m, "StageInstance");
