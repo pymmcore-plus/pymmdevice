@@ -61,7 +61,7 @@ jobs:
         run: |
           # if running on macos
           if [[ ${{ matrix.platform }} == 'macos-latest' ]]; then
-            brew install autoconf automake libtool boost pkg-config autoconf-archive
+            brew install automake boost autoconf-archive
           fi
           mmcore build-dev DemoCamera
 
