@@ -60,9 +60,6 @@ jobs:
         run: pytest --color=yes --cov --cov-report=xml --cov-report=term-missing
 
       - name: Coverage
-        uses: codecov/codecov-action@v3
-
-      - name: Coverage
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -83,7 +80,7 @@ jobs:
           fetch-depth: 0
 
       - name: 🐍 Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.x"
 
@@ -95,7 +92,7 @@ jobs:
       - name: 🚢 Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
 
-      - uses: softprops/action-gh-release@v1
+      - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           files: "./dist/*"
