@@ -8,7 +8,14 @@
 
 wrapper around MMDevice
 
-## Dev
+## Development
+
+Clone the repo:
+
+```sh
+git https://github.com/tlambert03/pymmdevice.git
+cd pymmdevice
+```
 
 editable install (must be done without build isolation to work with meson)
 compiled files end up in `build/` directory
@@ -16,6 +23,6 @@ compiled files end up in `build/` directory
 ```sh
 pip install meson-python ninja pybind11
 rm -rf build  # common problem
-pip install -e . --no-build-isolation --force-reinstall
+pip install -e . --no-build-isolation
 pybind11-stubgen pymmdevice._pymmdevice -o src
 ```

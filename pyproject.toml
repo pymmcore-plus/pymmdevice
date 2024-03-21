@@ -29,11 +29,15 @@ dependencies = []
 [project.optional-dependencies]
 test = ["pytest", "pytest-cov", "pymmcore-plus"]
 dev = [
+    "pymmdevice[test]",
+    "ninja",
+    "meson-python",
+    "pybind11",
     "ipython",
     "mypy",
-    "pdbpp",      # https://github.com/pdbpp/pdbpp
+    "pdbpp",
     "pre-commit",
-    "rich",       # https://github.com/Textualize/rich
+    "rich",
     "ruff",
 ]
 
