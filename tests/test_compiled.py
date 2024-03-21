@@ -2,14 +2,12 @@ from __future__ import annotations
 
 from typing import cast
 
-from pymmcore_plus import find_micromanager
-
 import pymmdevice._pymmdevice as m
 
 
-def test_loaded_dev() -> None:
+def test_loaded_dev(mm_lib_dir: str) -> None:
     pm = m.CPluginManager()
-    pm.SetSearchPaths([find_micromanager()])
+    pm.SetSearchPaths([mm_lib_dir])
     a = pm.GetDeviceAdapter("DemoCamera")
 
     assert "DCam" in a.get_available_device_names()

@@ -32,6 +32,7 @@ dev = [
     "pymmdevice[test]",
     "ninja",
     "meson-python",
+    "pybind11-stubgen",
     "pybind11",
     "ipython",
     "mypy",
