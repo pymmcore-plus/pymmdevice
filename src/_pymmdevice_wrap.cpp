@@ -147,11 +147,16 @@ PYBIND11_MODULE(_pymmdevice, m) {
 
   py::class_<CPluginManager>(m, "CPluginManager")
       .def(py::init())
+      .def("GetSearchPaths", &CPluginManager::GetSearchPaths)
       .def(
           "SetSearchPaths",
           [](CPluginManager &self, py::iterable paths) {
             std::vector<std::string> searchPaths;
             for (py::handle path : paths) {
+              // expand user and resolve path
+              py::object os_path = py::module::import("os.path");
+              path = os_path.attr("abspath")(os_path.attr("expanduser")(path));
+
               searchPaths.push_back(path.cast<std::string>());
             }
             self.SetSearchPaths(searchPaths.begin(), searchPaths.end());
