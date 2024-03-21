@@ -16,4 +16,5 @@ compiled files end up in `build/` directory
 ```sh
 pip install meson-python ninja pybind11
 pip install -e . --no-build-isolation --force-reinstall
+pybind11-stubgen pymmdevice._pymmdevice -o src
 ```
