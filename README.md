@@ -6,7 +6,38 @@
 [![CI](https://github.com/tlambert03/pymmdevice/actions/workflows/ci.yml/badge.svg)](https://github.com/tlambert03/pymmdevice/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/tlambert03/pymmdevice/branch/main/graph/badge.svg)](https://codecov.io/gh/tlambert03/pymmdevice)
 
-wrapper around MMDevice
+Direct, low-level control of Micro-Manager device adapters in Python.
+
+## Rationale
+
+Perhaps the most valuable asset of Micro-Manager is the vast
+library of device adapters that have been written over the years – including
+contributions from commercial vendors.  While new python packages arise
+from time to time with the goal of creating a fundamentally new device interface,
+they all suffer from the problem of limited device support (typically,
+they only implement the set of devices that the authors immediately need).  It
+is just super hard to recreate what Micro-Manager has built up over the years.
+
+For most use cases, if you want to use Micro-Manager devices directly in Python,
+you will use install the [`pymmcore`](https://github.com/micro-manager/pymmcore)
+(or [`pymmcore-plus`](https://github.com/pymmcore-plus/pymmcore-plus)) package
+and instantiate an instance of `pymmcore.CMMCore` (or
+`pymmcore_plus.CMMCorePlus`).  Then, to load a specific device adapter, you
+would call `loadDevice('MyLabel', 'ModuleName', 'DeviceName')`.  All control of
+the device is routed through the `CMMCore` instance, and is therefore subject to
+the `CMMCores` model and API.
+
+This library is an experimental lower-level wrapper around the MMDevice API that
+gives you *direct* control over device adapter libraries, without going through
+core.  This means that you could have nothing more than a single compiled device
+adapter (i.e. one of the `libmmgr_dal_` libraries that you find inside of the
+Micro-Manager directory) and still control it from Python.
+
+## Installation
+
+```sh
+pip install pymmdevice
+```
 
 ## Development
 
