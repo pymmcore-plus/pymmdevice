@@ -77,9 +77,7 @@ pip install meson-python meson ninja pybind11
 pip install -e ".[dev]" --no-build-isolation
 ```
 
-### Run tests
-
-#### One time setup
+#### Source the micro-manager libraries somewhere
 
 The tests require a compiled `libmmgr_dal_DemoCamera` library from
 Micro-Manager.  I do this by using the build-dev command from
@@ -88,11 +86,17 @@ been installed in the `[dev]` extra above.)
 
 ```sh
 mmcore build-dev DemoCamera
+
+# or, to install all libraries from the latest release
+mmcore install
 ```
 
 However, if you would like to point to a different location, you can set the
 `MM_LIB_DIR` environment variable to the directory containing the compiled
-libraries. (This directory must minimally contain `libmmgr_dal_DemoCamera`)
+libraries. (This directory must minimally contain `libmmgr_dal_DemoCamera`
+for tests to pass.)
+
+### Run tests
 
 Then you can run the tests:
 
