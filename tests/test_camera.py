@@ -8,7 +8,7 @@ import pytest
 import pymmdevice as pmmd
 
 
-def test_demo_camera(pm: pmmd.CPluginManager) -> None:
+def test_demo_camera(pm: pmmd.PluginManager) -> None:
     module = pm.GetDeviceAdapter("DemoCamera")
 
     available = module.get_available_device_names()
@@ -35,7 +35,7 @@ def test_demo_camera(pm: pmmd.CPluginManager) -> None:
         cam.Shutdown()
 
 
-def test_demo_camera_context(pm: pmmd.CPluginManager) -> None:
+def test_demo_camera_context(pm: pmmd.PluginManager) -> None:
     module = pm.GetDeviceAdapter("DemoCamera")
 
     with pytest.raises(TypeError, match="'DStateDevice' is not a CameraInstance"):

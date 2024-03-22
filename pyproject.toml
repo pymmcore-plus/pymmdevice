@@ -91,6 +91,11 @@ disallow_subclassing_any = false
 show_error_codes = true
 pretty = true
 
+[[tool.mypy.overrides]]
+module = ["pymmdevice._pymmdevice"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
 # https://docs.pytest.org/
 [tool.pytest.ini_options]
 minversion = "7.0"

@@ -1,13 +1,14 @@
 from typing import Sequence
-from ._pymmdevice import CPluginManager
 
-_GLOBAL_PM: None | CPluginManager
+from ._pymmdevice import PluginManager
+
+_GLOBAL_PM: None | PluginManager
 
 
-def pm() -> CPluginManager:
+def pm() -> PluginManager:
     global _GLOBAL_PM
     if _GLOBAL_PM is None:
-        _GLOBAL_PM = CPluginManager()
+        _GLOBAL_PM = PluginManager()
     return _GLOBAL_PM
 
 

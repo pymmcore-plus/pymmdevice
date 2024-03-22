@@ -29,7 +29,7 @@ def mm_lib_dir() -> str:
 
 
 @pytest.fixture
-def pm(mm_lib_dir: str) -> Iterator[pmmd.CPluginManager]:
-    pm = pmmd.CPluginManager()
+def pm(mm_lib_dir: str) -> Iterator[pmmd.PluginManager]:
+    pm = pmmd.PluginManager()
     pm.SetSearchPaths([mm_lib_dir])
     yield pm
