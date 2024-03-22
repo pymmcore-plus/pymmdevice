@@ -45,3 +45,7 @@ def test_demo_camera_context(pm: pmmd.PluginManager) -> None:
         assert cam.GetBinning() == 1
         cam.SetBinning(2)
         assert cam.GetBinning() == 2
+
+        assert cam.GetROI() == (0, 0, 256, 256)
+        cam.SetROI(64, 64, 128, 128)
+        assert cam.GetROI() == (64, 64, 128, 128)

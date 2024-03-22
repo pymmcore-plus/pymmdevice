@@ -51,6 +51,30 @@ py::class_<DeviceInstanceType, std::shared_ptr<DeviceInstanceType>> bindDeviceIn
       }));
 }
 
+py::array bufferToNumpy(const unsigned char *buffer, unsigned int height, unsigned int width,
+                        unsigned int bytesPerPixel) {
+  py::dtype dtype;
+  if (bytesPerPixel == 1) {
+    dtype = py::dtype::of<uint8_t>();
+  } else if (bytesPerPixel == 2) {
+    dtype = py::dtype::of<uint16_t>();
+  } else if (bytesPerPixel == 4) {
+    dtype = py::dtype::of<uint32_t>();
+  } else if (bytesPerPixel == 8) {
+    dtype = py::dtype::of<uint64_t>();
+  } else {
+    throw std::runtime_error("Unsupported bytes per pixel: " + std::to_string(bytesPerPixel));
+  }
+
+  // Assuming the buffer size is height * width * bytesPerPixel
+  // Ensure shape and strides are explicitly defined as vectors
+  std::vector<ssize_t> shape = {static_cast<ssize_t>(height), static_cast<ssize_t>(width)};
+  std::vector<ssize_t> strides = {static_cast<ssize_t>(width * bytesPerPixel),
+                                  static_cast<ssize_t>(bytesPerPixel)};
+
+  return py::array(dtype, shape, strides, buffer);
+}
+
 // Standalone function to replace the lambda
 auto loadDeviceFunction = [](LoadedDeviceAdapter &self, const std::string &name,
                              const std::string &label) -> std::shared_ptr<DeviceInstance> {
@@ -77,23 +101,16 @@ PYBIND11_MODULE(_pymmdevice, m) {
              return self;
            })
       .def("__exit__", [](CameraInstance &self, py::args args) -> void { self.Shutdown(); })
-      .def("SnapImage", &CameraInstance::SnapImage)
-      .def("GetNumberOfComponents", &CameraInstance::GetNumberOfComponents)
-      .def("GetComponentName", &CameraInstance::GetComponentName)
-      .def("GetNumberOfChannels", &CameraInstance::GetNumberOfChannels)
-      .def("GetChannelName", &CameraInstance::GetChannelName)
-      .def("GetImageBufferSize", &CameraInstance::GetImageBufferSize)
-      .def("GetImageWidth", &CameraInstance::GetImageWidth)
-      .def("GetImageHeight", &CameraInstance::GetImageHeight)
-      .def("GetImageBytesPerPixel", &CameraInstance::GetImageBytesPerPixel)
-      .def("GetBitDepth", &CameraInstance::GetBitDepth)
-      .def("GetPixelSizeUm", &CameraInstance::GetPixelSizeUm)
+      .def("AddTag", &CameraInstance::AddTag)
+      .def("AddToExposureSequence", &CameraInstance::AddToExposureSequence)
+      .def("ClearExposureSequence", &CameraInstance::ClearExposureSequence)
+      .def("ClearROI", &CameraInstance::ClearROI)
       .def("GetBinning", &CameraInstance::GetBinning)
-      .def("SetBinning", &CameraInstance::SetBinning)
-      .def("SetExposure", &CameraInstance::SetExposure)
+      .def("GetBitDepth", &CameraInstance::GetBitDepth)
+      .def("GetChannelName", &CameraInstance::GetChannelName)
+      .def("GetComponentName", &CameraInstance::GetComponentName)
       .def("GetExposure", &CameraInstance::GetExposure)
-      .def("Initialize", &CameraInstance::Initialize)
-      .def("Shutdown", &CameraInstance::Shutdown)
+      .def("GetExposureSequenceMaxLength", &CameraInstance::GetExposureSequenceMaxLength)
       .def("GetImageBuffer", static_cast<const unsigned char *(CameraInstance::*)()>(
                                  &CameraInstance::GetImageBuffer))
       .def("GetImageBuffer", static_cast<const unsigned char *(CameraInstance::*)(unsigned)>(
@@ -101,44 +118,47 @@ PYBIND11_MODULE(_pymmdevice, m) {
       .def(
           "GetImageArray",
           [](CameraInstance &self, unsigned arg) {
-            // Infer the shape and type of the numpy array from the camera instance
-            unsigned height = self.GetImageHeight();
-            unsigned width = self.GetImageWidth();
-            unsigned bytesPerPixel = self.GetImageBytesPerPixel();
-            py::dtype dtype;
-            switch (bytesPerPixel) {
-              case 1:
-                dtype = py::dtype::of<uint8_t>();
-                break;
-              case 2:
-                dtype = py::dtype::of<uint16_t>();
-                break;
-              case 4:
-                dtype = py::dtype::of<uint32_t>();
-                break;
-              case 8:
-                dtype = py::dtype::of<uint64_t>();
-                break;
-              default:
-                throw std::runtime_error("Unsupported bytes per pixel");
-            }
-
-            // Assuming the buffer size is height * width * bytesPerPixel
-            const unsigned char *buffer = self.GetImageBuffer(arg);
-
-            // Ensure shape and strides are explicitly defined as vectors
-            std::vector<ssize_t> shape = {static_cast<ssize_t>(height),
-                                          static_cast<ssize_t>(width)};
-            std::vector<ssize_t> strides = {static_cast<ssize_t>(width * bytesPerPixel),
-                                            static_cast<ssize_t>(bytesPerPixel)};
-
-            return py::array(dtype, shape, strides, buffer);
-
-            // Create a NumPy array that shares the buffer without copying
-            // return py::array(dtype, {height, width}, {width * bytesPerPixel, bytesPerPixel},
-            // buffer);
+            return bufferToNumpy(self.GetImageBuffer(arg), self.GetImageHeight(),
+                                 self.GetImageWidth(), self.GetImageBytesPerPixel());
           },
-          py::arg("arg") = 0);
+          py::arg("arg") = 0)
+      .def("GetImageBufferAsRGB32", &CameraInstance::GetImageBufferAsRGB32)
+      .def("GetImageBufferSize", &CameraInstance::GetImageBufferSize)
+      .def("GetImageBytesPerPixel", &CameraInstance::GetImageBytesPerPixel)
+      .def("GetImageHeight", &CameraInstance::GetImageHeight)
+      .def("GetImageWidth", &CameraInstance::GetImageWidth)
+      .def("GetMultiROI", &CameraInstance::GetMultiROI)
+      .def("GetMultiROICount", &CameraInstance::GetMultiROICount)
+      .def("GetNumberOfChannels", &CameraInstance::GetNumberOfChannels)
+      .def("GetNumberOfComponents", &CameraInstance::GetNumberOfComponents)
+      .def("GetPixelSizeUm", &CameraInstance::GetPixelSizeUm)
+      .def("GetROI",
+           [](CameraInstance &self) {
+             unsigned x, y, xSize, ySize;
+             self.GetROI(x, y, xSize, ySize);
+             return std::make_tuple(x, y, xSize, ySize);
+           })
+      .def("GetTags", &CameraInstance::GetTags)
+      .def("Initialize", &CameraInstance::Initialize)
+      .def("IsCapturing", &CameraInstance::IsCapturing)
+      .def("IsExposureSequenceable", &CameraInstance::IsExposureSequenceable)
+      .def("IsMultiROISet", &CameraInstance::IsMultiROISet)
+      .def("RemoveTag", &CameraInstance::RemoveTag)
+      .def("SendExposureSequence", &CameraInstance::SendExposureSequence)
+      .def("SetBinning", &CameraInstance::SetBinning)
+      .def("SetExposure", &CameraInstance::SetExposure)
+      .def("SetMultiROI", &CameraInstance::SetMultiROI)
+      .def("SetROI", &CameraInstance::SetROI)
+      .def("Shutdown", &CameraInstance::Shutdown)
+      .def("SnapImage", &CameraInstance::SnapImage)
+      .def("StartExposureSequence", &CameraInstance::StartExposureSequence)
+      .def("StopExposureSequence", &CameraInstance::StopExposureSequence)
+      .def("StopSequenceAcquisition", &CameraInstance::StopSequenceAcquisition)
+      .def("SupportsMultiROI", &CameraInstance::SupportsMultiROI)
+      .def("StartSequenceAcquisition", static_cast<int (CameraInstance::*)(long, double, bool)>(
+                                           &CameraInstance::StartSequenceAcquisition))
+      .def("StartSequenceAcquisition", static_cast<int (CameraInstance::*)(double)>(
+                                           &CameraInstance::StartSequenceAcquisition));
 
   bindDeviceInstance<ShutterInstance>(m, "ShutterInstance");
   bindDeviceInstance<StageInstance>(m, "StageInstance");
