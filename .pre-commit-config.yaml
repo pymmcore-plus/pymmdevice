@@ -27,6 +27,7 @@ repos:
         entry: bash -c 'pybind11-stubgen pymmdevice._pymmdevice -o src && ruff format src/pymmdevice/_pymmdevice.pyi && ruff check src/pymmdevice/_pymmdevice.pyi --fix'
         language: system
         pass_filenames: false
+        ci: false
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     rev: v0.3.4
