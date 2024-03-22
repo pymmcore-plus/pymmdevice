@@ -1,4 +1,5 @@
 import pytest
+
 import pymmdevice as pmmd
 
 
@@ -15,9 +16,7 @@ def _getenv(varname: str) -> str:
 def test_plugin_manager(mm_lib_dir: str) -> None:
     pm = pmmd.PluginManager()
     assert not pm.GetAvailableDeviceAdapters()
-    with pytest.raises(
-        RuntimeError, match='Failed to load device adapter "FooCamera"'
-    ):
+    with pytest.raises(RuntimeError, match='Failed to load device adapter "FooCamera"'):
         pm.GetDeviceAdapter("FooCamera")
 
     pm.SetSearchPaths([mm_lib_dir])
