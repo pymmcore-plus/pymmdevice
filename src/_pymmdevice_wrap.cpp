@@ -1,5 +1,8 @@
+#include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>  // For automatic conversion between C++ and Python containers
+
+#include <iostream>
 
 #include "AutoFocusInstance.h"
 #include "CameraInstance.h"
@@ -29,6 +32,9 @@ class MockCMMCore : public CMMCore {
   // You might not need to implement anything if LoadDevice truly does nothing with it
 };
 
+// Define a holder type for DeviceInstance
+using DeviceInstanceHolder = std::shared_ptr<DeviceInstance>;
+
 template <typename DeviceInstanceType>
 py::class_<DeviceInstanceType, std::shared_ptr<DeviceInstanceType>> bindDeviceInstance(
     py::module_ &m, const std::string &pythonClassName) {
@@ -43,8 +49,23 @@ py::class_<DeviceInstanceType, std::shared_ptr<DeviceInstanceType>> bindDeviceIn
       }));
 }
 
+// Standalone function to replace the lambda
+auto loadDeviceFunction = [](LoadedDeviceAdapter &self, const std::string &name,
+                             const std::string &label) -> std::shared_ptr<DeviceInstance> {
+  MockCMMCore mockCore;
+  mm::logging::internal::GenericLogger<mm::logging::EntryData> deviceLogger(0);
+  mm::logging::internal::GenericLogger<mm::logging::EntryData> coreLogger(0);
+  return self.LoadDevice(&mockCore, name, label, deviceLogger, coreLogger);
+};
+
 PYBIND11_MODULE(_pymmdevice, m) {
   bindDeviceInstance<CameraInstance>(m, "CameraInstance")
+      .def("__enter__",
+           [](CameraInstance &self) -> CameraInstance & {
+             self.Initialize();
+             return self;
+           })
+      .def("__exit__", [](CameraInstance &self, py::args args) -> void { self.Shutdown(); })
       .def("SnapImage", &CameraInstance::SnapImage)
       .def("GetNumberOfComponents", &CameraInstance::GetNumberOfComponents)
       .def("GetComponentName", &CameraInstance::GetComponentName)
@@ -60,7 +81,55 @@ PYBIND11_MODULE(_pymmdevice, m) {
       .def("SetBinning", &CameraInstance::SetBinning)
       .def("SetExposure", &CameraInstance::SetExposure)
       .def("GetExposure", &CameraInstance::GetExposure)
-      .def("Initialize", &CameraInstance::Initialize);
+      .def("Initialize", &CameraInstance::Initialize)
+      .def("Shutdown", &CameraInstance::Shutdown)
+      .def("GetImageBuffer", static_cast<const unsigned char *(CameraInstance::*)()>(
+                                 &CameraInstance::GetImageBuffer))
+      .def("GetImageBuffer", static_cast<const unsigned char *(CameraInstance::*)(unsigned)>(
+                                 &CameraInstance::GetImageBuffer))
+      .def("GetImageArray",
+           [](CameraInstance &self, py::args args) {
+             // Infer the shape and type of the numpy array from the camera instance
+             unsigned height = self.GetImageHeight();
+             unsigned width = self.GetImageWidth();
+             unsigned bytesPerPixel = self.GetImageBytesPerPixel();
+             py::dtype dtype;
+             switch (bytesPerPixel) {
+               case 1:
+                 dtype = py::dtype::of<uint8_t>();
+                 break;
+               case 2:
+                 dtype = py::dtype::of<uint16_t>();
+                 break;
+               case 4:
+                 dtype = py::dtype::of<uint32_t>();
+                 break;
+               case 8:
+                 dtype = py::dtype::of<uint64_t>();
+                 break;
+               default:
+                 throw std::runtime_error("Unsupported bytes per pixel");
+             }
+
+             // Assuming the buffer size is height * width * bytesPerPixel
+             size_t size = height * width * bytesPerPixel;
+             const unsigned char *buffer = args.size() == 0
+                                               ? self.GetImageBuffer()
+                                               : self.GetImageBuffer(args[0].cast<unsigned>());
+
+             // Ensure shape and strides are explicitly defined as vectors
+             std::vector<ssize_t> shape = {static_cast<ssize_t>(height),
+                                           static_cast<ssize_t>(width)};
+             std::vector<ssize_t> strides = {static_cast<ssize_t>(width * bytesPerPixel),
+                                             static_cast<ssize_t>(bytesPerPixel)};
+
+             return py::array(dtype, shape, strides, buffer);
+
+             // Create a NumPy array that shares the buffer without copying
+             // return py::array(dtype, {height, width}, {width * bytesPerPixel, bytesPerPixel},
+             // buffer);
+           })
+      .def("SnapImage", &CameraInstance::SnapImage);
 
   bindDeviceInstance<ShutterInstance>(m, "ShutterInstance");
   bindDeviceInstance<StageInstance>(m, "StageInstance");
@@ -78,11 +147,16 @@ PYBIND11_MODULE(_pymmdevice, m) {
 
   py::class_<CPluginManager>(m, "CPluginManager")
       .def(py::init())
+      .def("GetSearchPaths", &CPluginManager::GetSearchPaths)
       .def(
           "SetSearchPaths",
           [](CPluginManager &self, py::iterable paths) {
             std::vector<std::string> searchPaths;
             for (py::handle path : paths) {
+              // expand user and resolve path
+              py::object os_path = py::module::import("os.path");
+              path = os_path.attr("abspath")(os_path.attr("expanduser")(path));
+
               searchPaths.push_back(path.cast<std::string>());
             }
             self.SetSearchPaths(searchPaths.begin(), searchPaths.end());
@@ -101,13 +175,25 @@ PYBIND11_MODULE(_pymmdevice, m) {
            static_cast<std::string (LoadedDeviceAdapter::*)(const std::string &) const>(
                &LoadedDeviceAdapter::GetDeviceDescription),
            py::arg("deviceName"))
+      .def("load_device", loadDeviceFunction, py::arg("name"), py::arg("label"),
+           py::return_value_policy::automatic)
+      // the following methods simply call load_device internally, but ensure
+      // that the return type is the correct DeviceInstance subclass
       .def(
-          "load_device",
-          [](LoadedDeviceAdapter &self, const std::string &name, const std::string &label) {
-            MockCMMCore mockCore;
-            mm::logging::internal::GenericLogger<mm::logging::EntryData> deviceLogger(0);
-            mm::logging::internal::GenericLogger<mm::logging::EntryData> coreLogger(0);
-            return self.LoadDevice(&mockCore, name, label, deviceLogger, coreLogger);
+          "load_camera",
+          [](LoadedDeviceAdapter &self, const std::string &name,
+             const std::string &label) -> std::shared_ptr<CameraInstance> {
+            auto device = loadDeviceFunction(self, name, label);
+            std::shared_ptr<DeviceInstance> deviceHolder(device);
+            std::shared_ptr<CameraInstance> camera =
+                std::dynamic_pointer_cast<CameraInstance>(deviceHolder);
+            if (!camera) {
+              std::ostringstream msg;
+              msg << "'" << name << "' is not a CameraInstance";
+              PyErr_SetString(PyExc_TypeError, msg.str().c_str());
+              throw py::error_already_set();
+            }
+            return camera;
           },
           py::arg("name"), py::arg("label"), py::return_value_policy::automatic);
 }
