@@ -4,12 +4,6 @@ ci:
   autoupdate_commit_msg: "ci(pre-commit.ci): autoupdate"
 
 repos:
-  - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v18.1.1
-    hooks:
-      - id: clang-format
-        args: ["--style={ BasedOnStyle: Google, ColumnLimit: 99 }", -i]
-
   - repo: https://github.com/abravalheri/validate-pyproject
     rev: v0.16
     hooks:
@@ -19,6 +13,20 @@ repos:
     rev: v1.19.0
     hooks:
       - id: typos
+
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v18.1.1
+    hooks:
+      - id: clang-format
+        args: ["--style={ BasedOnStyle: Google, ColumnLimit: 99 }", -i]
+
+  - repo: local
+    hooks:
+      - id: my-hook
+        name: build-stubs
+        entry: bash -c 'pybind11-stubgen pymmdevice._pymmdevice -o src && ruff format src/pymmdevice/_pymmdevice.pyi && ruff check src/pymmdevice/_pymmdevice.pyi --fix'
+        language: system
+        pass_filenames: false
 
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     rev: v0.3.4
