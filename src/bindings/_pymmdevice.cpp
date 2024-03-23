@@ -146,9 +146,16 @@ PYBIND11_MODULE(_pymmdevice, m) {
       .value("Float", MM::PropertyType::Float)
       .value("Integer", MM::PropertyType::Integer);
 
+  py::enum_<MM::FocusDirection>(m, "FocusDirection")
+      .value("FocusDirectionUnknown", MM::FocusDirection::FocusDirectionUnknown)
+      .value("FocusDirectionTowardSample", MM::FocusDirection::FocusDirectionTowardSample)
+      .value("FocusDirectionAwayFromSample", MM::FocusDirection::FocusDirectionAwayFromSample);
+
   py::class_<MM::Core> core(m, "Core");
 
   // Various DeviceInstance subclasses
+
+  /////////////////////// CameraInstance ///////////////////////
 
   bindDeviceInstance<CameraInstance>(m, "CameraInstance")
       .def("SnapImage", &CameraInstance::SnapImage)
@@ -185,7 +192,7 @@ PYBIND11_MODULE(_pymmdevice, m) {
       .def("StartSequenceAcquisition",
            static_cast<int (CameraInstance::*)(double)>(&CameraInstance::StartSequenceAcquisition))
       .def("StopSequenceAcquisition", &CameraInstance::StopSequenceAcquisition)
-      // .def("PrepareSequenceAcquisition", &CameraInstance::PrepareSequenceAcquisition)
+      .def("PrepareSequenceAcquisition", &CameraInstance::PrepareSequenceAcqusition)
       .def("IsCapturing", &CameraInstance::IsCapturing)
       .def("GetTags", &CameraInstance::GetTags)
       .def("AddTag", &CameraInstance::AddTag)
@@ -210,18 +217,185 @@ PYBIND11_MODULE(_pymmdevice, m) {
           },
           py::arg("arg") = 0);
 
-  bindDeviceInstance<ShutterInstance>(m, "ShutterInstance");
-  bindDeviceInstance<StageInstance>(m, "StageInstance");
-  bindDeviceInstance<XYStageInstance>(m, "XYStageInstance");
-  bindDeviceInstance<StateInstance>(m, "StateInstance");
+  /////////////////////// ShutterInstance ///////////////////////
+  bindDeviceInstance<ShutterInstance>(m, "ShutterInstance")
+      .def("SetOpen", &ShutterInstance::SetOpen, py::arg("open"))
+      .def("GetOpen",
+           [](ShutterInstance &self) {
+             bool open;
+             self.GetOpen(open);
+             return open;
+           })
+      .def("Fire", &ShutterInstance::Fire, py::arg("deltaT"));
+
+  /////////////////////// StageInstance ///////////////////////
+  bindDeviceInstance<StageInstance>(m, "StageInstance")
+      .def("SetPositionUm", &StageInstance::SetPositionUm, py::arg("pos"))
+      .def("SetRelativePositionUm", &StageInstance::SetRelativePositionUm, py::arg("d"))
+      .def("Move", &StageInstance::Move, py::arg("velocity"))
+      .def("Stop", &StageInstance::Stop)
+      .def("Home", &StageInstance::Home)
+      .def("SetAdapterOriginUm", &StageInstance::SetAdapterOriginUm, py::arg("d"))
+      .def("GetPositionUm",
+           [](StageInstance &self) {
+             double pos;
+             self.GetPositionUm(pos);
+             return pos;
+           })
+      .def("SetPositionSteps", &StageInstance::SetPositionSteps, py::arg("steps"))
+      .def("GetPositionSteps",
+           [](StageInstance &self) {
+             long steps;
+             self.GetPositionSteps(steps);
+             return steps;
+           })
+      .def("SetOrigin", &StageInstance::SetOrigin)
+      .def("GetLimits",
+           [](StageInstance &self) {
+             double lower, upper;
+             self.GetLimits(lower, upper);
+             return std::make_pair(lower, upper);
+           })
+      .def("GetFocusDirection", &StageInstance::GetFocusDirection)
+      .def("SetFocusDirection", &StageInstance::SetFocusDirection, py::arg("direction"))
+      .def("IsStageSequenceable",
+           [](StageInstance &self) {
+             bool isSequenceable;
+             self.IsStageSequenceable(isSequenceable);
+             return isSequenceable;
+           })
+      .def("IsStageLinearSequenceable",
+           [](StageInstance &self) {
+             bool isSequenceable;
+             self.IsStageLinearSequenceable(isSequenceable);
+             return isSequenceable;
+           })
+      .def("IsContinuousFocusDrive", &StageInstance::IsContinuousFocusDrive)
+      .def("GetStageSequenceMaxLength",
+           [](StageInstance &self) {
+             long nrEvents;
+             self.GetStageSequenceMaxLength(nrEvents);
+             return nrEvents;
+           })
+      .def("StartStageSequence", &StageInstance::StartStageSequence)
+      .def("StopStageSequence", &StageInstance::StopStageSequence)
+      .def("ClearStageSequence", &StageInstance::ClearStageSequence)
+      .def("AddToStageSequence", &StageInstance::AddToStageSequence, py::arg("position"))
+      .def("SendStageSequence", &StageInstance::SendStageSequence)
+      .def("SetStageLinearSequence", &StageInstance::SetStageLinearSequence, py::arg("dZ_um"),
+           py::arg("nSlices"));
+
+  /////////////////////// XYStageInstance ///////////////////////
+  bindDeviceInstance<XYStageInstance>(m, "XYStageInstance")
+      .def("SetPositionUm", &XYStageInstance::SetPositionUm, py::arg("x"), py::arg("y"))
+      .def("SetRelativePositionUm", &XYStageInstance::SetRelativePositionUm, py::arg("dx"),
+           py::arg("dy"))
+      .def("SetAdapterOriginUm", &XYStageInstance::SetAdapterOriginUm, py::arg("x"), py::arg("y"))
+      .def("GetPositionUm",
+           [](XYStageInstance &self) {
+             double x, y;
+             self.GetPositionUm(x, y);
+             return std::make_pair(x, y);
+           })
+      .def("SetPositionSteps", &XYStageInstance::SetPositionSteps, py::arg("x"), py::arg("y"))
+      .def("GetPositionSteps",
+           [](XYStageInstance &self) {
+             long x, y;
+             self.GetPositionSteps(x, y);
+             return std::make_pair(x, y);
+           })
+      .def("SetOrigin", &XYStageInstance::SetOrigin)
+      .def("GetStepSizeXUm", &XYStageInstance::GetStepSizeXUm)
+      .def("GetStepSizeYUm", &XYStageInstance::GetStepSizeYUm)
+      .def("GetStepSize",  // NOT in the original class
+           [](XYStageInstance &self) {
+             return std::make_pair(self.GetStepSizeXUm(), self.GetStepSizeYUm());
+           })
+      .def(
+          "GetLimitsUm",
+          [](XYStageInstance &self) {
+            double xMin, xMax, yMin, yMax;
+            self.GetLimitsUm(xMin, xMax, yMin, yMax);
+            return std::make_tuple(xMin, xMax, yMin, yMax);
+          },
+          "Return limits of the XY stage in um (xMin, xMax, yMin, yMax)")
+      .def("IsXYStageSequenceable",
+           [](XYStageInstance &self) {
+             bool isSequenceable;
+             self.IsXYStageSequenceable(isSequenceable);
+             return isSequenceable;
+           })
+      .def("GetXYStageSequenceMaxLength",
+           [](XYStageInstance &self) {
+             long nrEvents;
+             self.GetXYStageSequenceMaxLength(nrEvents);
+             return nrEvents;
+           })
+      .def("StartXYStageSequence", &XYStageInstance::StartXYStageSequence)
+      .def("StopXYStageSequence", &XYStageInstance::StopXYStageSequence)
+      .def("ClearXYStageSequence", &XYStageInstance::ClearXYStageSequence)
+      .def("AddToXYStageSequence", &XYStageInstance::AddToXYStageSequence, py::arg("positionX"),
+           py::arg("positionY"))
+      .def("SendXYStageSequence", &XYStageInstance::SendXYStageSequence);
+
+  /////////////////////// StateInstance ///////////////////////
+  bindDeviceInstance<StateInstance>(m, "StateInstance")
+      .def("SetPosition", py::overload_cast<long>(&StateInstance::SetPosition), py::arg("pos"))
+      .def("SetPosition", py::overload_cast<const char *>(&StateInstance::SetPosition),
+           py::arg("label"))
+      .def("GetPosition",
+           [](StateInstance &self) {
+             long pos;
+             self.GetPosition(pos);
+             return pos;
+           })
+      .def("GetPositionLabel", [](const StateInstance &self) { return self.GetPositionLabel(); })
+      .def(
+          "GetPositionLabel",
+          [](const StateInstance &self, long pos) { return self.GetPositionLabel(pos); },
+          py::arg("pos"))
+      .def(
+          "GetLabelPosition",
+          [](StateInstance &self, const char *label) {
+            long pos;
+            self.GetLabelPosition(label, pos);
+            return pos;
+          },
+          py::arg("label"))
+      .def("SetPositionLabel", &StateInstance::SetPositionLabel, py::arg("pos"), py::arg("label"))
+      .def("GetNumberOfPositions", &StateInstance::GetNumberOfPositions)
+      .def("SetGateOpen", &StateInstance::SetGateOpen, py::arg("open") = true)
+      .def("GetGateOpen", [](StateInstance &self) {
+        bool open;
+        self.GetGateOpen(open);
+        return open;
+      });
+
+  /////////////////////// SerialInstance ///////////////////////
   bindDeviceInstance<SerialInstance>(m, "SerialInstance");
+
+  /////////////////////// GenericInstance ///////////////////////
   bindDeviceInstance<GenericInstance>(m, "GenericInstance");
+
+  /////////////////////// AutoFocusInstance ///////////////////////
   bindDeviceInstance<AutoFocusInstance>(m, "AutoFocusInstance");
+
+  /////////////////////// ImageProcessorInstance ///////////////////////
   bindDeviceInstance<ImageProcessorInstance>(m, "ImageProcessorInstance");
+
+  /////////////////////// SignalIOInstance ///////////////////////
   bindDeviceInstance<SignalIOInstance>(m, "SignalIOInstance");
+
+  /////////////////////// MagnifierInstance ///////////////////////
   bindDeviceInstance<MagnifierInstance>(m, "MagnifierInstance");
+
+  /////////////////////// SLMInstance ///////////////////////
   bindDeviceInstance<SLMInstance>(m, "SLMInstance");
+
+  /////////////////////// GalvoInstance ///////////////////////
   bindDeviceInstance<GalvoInstance>(m, "GalvoInstance");
+
+  /////////////////////// HubInstance ///////////////////////
   bindDeviceInstance<HubInstance>(m, "HubInstance");
 
   // PluginManager

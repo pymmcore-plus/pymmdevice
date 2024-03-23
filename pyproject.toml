@@ -128,3 +128,6 @@ source = ["pymmdevice"]
 
 [tool.check-manifest]
 ignore = [".pre-commit-config.yaml", ".ruff_cache/**/*", "tests/**/*"]
+
+[tool.typos.default.extend-identifiers]
+PrepareSequenceAcqusition = "PrepareSequenceAcqusition"
