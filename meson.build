@@ -26,7 +26,7 @@ foreach dir : include_dirs_list
 endforeach
 
 # all necessary CPP files
-cpp_sources = ['src/_pymmdevice_wrap.cpp']
+cpp_sources = ['src/bindings/_pymmdevice.cpp']
 print_sources = '''
 import pathlib
 m = pathlib.Path('extern/mmCoreAndDevices')

@@ -72,10 +72,12 @@ select = [
 ]
 ignore = [
     "D401", # First line should be in imperative mood (remove to opt in)
+
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*.py" = ["D", "S"]
+"*.pyi" = ["D", "S", "E501"]
 
 # https://docs.astral.sh/ruff/formatter/
 [tool.ruff.format]
