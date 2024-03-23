@@ -10,6 +10,7 @@ __all__ = [
     "Callable",
     "CameraInstance",
     "Core",
+    "DEVICE_INTERFACE_VERSION",
     "Device",
     "DeviceDetectionStatus",
     "DeviceInstance",
@@ -1263,3 +1264,5 @@ class XYStageInstance:
         arg6: Logger,
         arg7: Logger,
     ) -> None: ...
+
+DEVICE_INTERFACE_VERSION: int = 71

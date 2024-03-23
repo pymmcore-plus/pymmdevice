@@ -6,6 +6,7 @@ project(
     meson_version: '>= 1.1.0',
     default_options: [
         'cpp_std=c++14',
+        'b_coverage=true',
     ],
 )
 
@@ -54,3 +55,8 @@ py.extension_module('_pymmdevice',
 # install the Python package into the site-packages directory
 install_subdir('src/pymmdevice', install_dir: py.get_install_dir() / 'pymmdevice', strip_directory: true)
 
+test('test_script',
+    py,
+    args: ['-m', 'pytest', '--color=yes', '-v', '--cov=pymmdevice', '--cov-report=xml'],
+    workdir: meson.current_source_dir()
+)

@@ -115,6 +115,9 @@ std::string getErrorMessage(DeviceInstance *device, int errorCode) {
 }
 
 PYBIND11_MODULE(_pymmdevice, m) {
+  // define module level attribute for DEVICE_INTERFACE_VERSION
+  m.attr("DEVICE_INTERFACE_VERSION") = DEVICE_INTERFACE_VERSION;
+
   // TODO: these are simply here for pybind11-stubgen ... but they don't work
   py::class_<MM::Device>(m, "Device");
   py::class_<MockCMMCore>(m, "MockCMMCore");
