@@ -11,7 +11,13 @@ clean:
 
 install:
 	make clean
-	uv pip install -e . --no-build-isolation --force-reinstall
+	uv pip install -e . \
+		--no-build-isolation \
+		--force-reinstall \
+		--config-settings=editable-verbose=true \
+		--config-settings=setup-args="-Db_coverage=true" \
+		--config-settings=compile-args="-j8"
+
 
 test:
 	meson test -C $(BUILDDIR) --verbose
