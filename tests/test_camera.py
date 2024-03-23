@@ -11,11 +11,11 @@ import pymmdevice as pmmd
 def test_demo_camera(pm: pmmd.PluginManager) -> None:
     module = pm.GetDeviceAdapter("DemoCamera")
 
-    available = module.get_available_device_names()
+    available = module.GetAvailableDeviceNames()
     assert "DCam" in available
-    assert module.get_device_description("DCam") == "Demo camera"
+    assert module.GetDeviceDescription("DCam") == "Demo camera"
 
-    cam = cast(pmmd.CameraInstance, module.load_device("DCam", "MyCamera"))
+    cam = cast(pmmd.CameraInstance, module.LoadDevice("DCam", "MyCamera"))
     cam.Initialize()
     try:
         assert (cam.GetImageWidth(), cam.GetImageHeight()) == (512, 512)

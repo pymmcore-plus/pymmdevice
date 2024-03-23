@@ -64,6 +64,12 @@ def pm(mm_lib_dir: str) -> Iterator[pmmd.PluginManager]:
     yield pm
 
 
+@pytest.fixture
+def dm() -> Iterator[pmmd.DeviceManager]:
+    with pmmd.DeviceManager() as dm:
+        yield dm
+
+
 @pytest.fixture(params=DEMO_DEVICES, ids=lambda d: d.name)
 def device_info(request: pytest.FixtureRequest) -> Iterator[Di]:
     yield request.param

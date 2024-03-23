@@ -15,7 +15,7 @@ install:
 		--no-build-isolation \
 		--force-reinstall \
 		--config-settings=editable-verbose=true \
-		--config-settings=setup-args="-Db_coverage=true" \
+		# --config-settings=setup-args="-Db_coverage=true" \
 		--config-settings=compile-args="-j8"
 
 
@@ -26,7 +26,7 @@ coverage:
 	rm -rf coverage coverage.xml coverage_cpp.xml
 	mkdir coverage
 	make test
-	gcovr --xml coverage_cpp.xml
+	gcovr --xml coverage_cpp.xml --xml-pretty
 	gcovr --html-details -o coverage/index.html --exclude .venv
 	open coverage/index.html
 

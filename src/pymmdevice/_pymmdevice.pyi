@@ -14,6 +14,7 @@ __all__ = [
     "Device",
     "DeviceDetectionStatus",
     "DeviceInstance",
+    "DeviceManager",
     "DeviceType",
     "FocusDirection",
     "GalvoInstance",
@@ -262,6 +263,53 @@ class DeviceDetectionStatus:
 
 class DeviceInstance:
     pass
+
+class DeviceManager:
+    def GetCameraDevice(self, device: DeviceInstance) -> CameraInstance:
+        """
+        Get a device by label, requiring a specific type.
+        """
+    def GetDevice(self, label: str) -> DeviceInstance:
+        """
+        Get a device by label.
+        """
+    def GetDeviceList(self, t: DeviceType) -> list[str]:
+        """
+        Get the labels of all loaded devices of a given type.
+        """
+    def GetDeviceOfType(self, label: str, device_type: DeviceType) -> DeviceInstance:
+        """
+        Get a device by label, requiring a specific type.
+        """
+    def GetLoadedPeripherals(self, hubLabel: str) -> list[str]:
+        """
+        Get the labels of all loaded peripherals of a hub device.
+        """
+    def GetParentDevice(self, device: DeviceInstance) -> HubInstance:
+        """
+        Get the parent hub device of a peripheral.
+        """
+    def GetStageDevice(self, device: DeviceInstance) -> StageInstance:
+        """
+        Get a device by label, requiring a specific type.
+        """
+    def LoadDevice(
+        self, module: LoadedDeviceAdapter, deviceName: str, label: str
+    ) -> DeviceInstance:
+        """
+        Load the specified device and assign a device label.
+        """
+    def UnloadAllDevices(self) -> None:
+        """
+        Unload all devices.
+        """
+    def UnloadDevice(self, device: DeviceInstance) -> None:
+        """
+        Unload a device.
+        """
+    def __enter__(self) -> DeviceManager: ...
+    def __exit__(self, *args) -> None: ...
+    def __init__(self) -> None: ...
 
 class DeviceType:
     """
@@ -627,12 +675,12 @@ class ImageProcessorInstance:
     ) -> None: ...
 
 class LoadedDeviceAdapter:
+    def GetAvailableDeviceNames(self) -> list[str]: ...
+    def GetDeviceDescription(self, deviceName: str) -> str: ...
+    def GetName(self) -> str: ...
+    def LoadDevice(self, name: str, label: str) -> DeviceInstance: ...
     def __init__(self, arg0: str, arg1: str) -> None: ...
-    def get_available_device_names(self) -> list[str]: ...
-    def get_device_description(self, deviceName: str) -> str: ...
-    def get_name(self) -> str: ...
     def load_camera(self, name: str, label: str) -> CameraInstance: ...
-    def load_device(self, name: str, label: str) -> DeviceInstance: ...
 
 class Logger:
     pass

@@ -56,5 +56,5 @@ def test_global_pm(mm_lib_dir: str) -> None:
 
 def test_all_devices(pm: pmmd.PluginManager, device_info: Di) -> None:
     module = pm.GetDeviceAdapter(device_info.library)
-    with module.load_device(device_info.name, f"My{device_info.name}") as dev:
+    with module.LoadDevice(device_info.name, f"My{device_info.name}") as dev:
         assert dev

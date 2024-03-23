@@ -101,11 +101,15 @@ py::class_<DType, std::shared_ptr<DType>> bindDeviceInstance(py::module_ &m,
 }
 
 // Standalone function to replace the lambda
-auto loadDeviceFunction = [](LoadedDeviceAdapter &self, const std::string &name,
-                             const std::string &label) -> std::shared_ptr<DeviceInstance> {
+auto loadDevice_ = [](LoadedDeviceAdapter &self, const std::string &name,
+                      const std::string &label) -> std::shared_ptr<DeviceInstance> {
   MockCMMCore mockCore;
   mm::logging::internal::GenericLogger<mm::logging::EntryData> deviceLogger(0);
   mm::logging::internal::GenericLogger<mm::logging::EntryData> coreLogger(0);
+  // NOTE:
+  // in DeviceManager.LoadDevice, the description is taken from the module
+  // and assigned to the device.  It's not immediately obvious why that shouldn't
+  // also be done here...
   return self.LoadDevice(&mockCore, name, label, deviceLogger, coreLogger);
 };
 
@@ -169,6 +173,156 @@ PYBIND11_MODULE(_pymmdevice, m) {
       .value("SerialPort", MM::PortType::SerialPort)
       .value("USBPort", MM::PortType::USBPort)
       .value("HIDPort", MM::PortType::HIDPort);
+
+  //////////////////////// PluginManager ////////////////////////
+
+  py::class_<CPluginManager>(m, "PluginManager")
+      .def(py::init())
+      .def("GetSearchPaths", &CPluginManager::GetSearchPaths)
+      .def(
+          "SetSearchPaths",
+          [](CPluginManager &self, py::iterable paths) {
+            std::vector<std::string> searchPaths;
+            std::string env_path = getenv("PATH");
+            for (py::handle path : paths) {
+              std::string path_str = util::resolvePath(path);
+              searchPaths.push_back(path_str);
+              // add path to PATH environment variable if it's not already there
+              if (env_path.find(path_str) == std::string::npos) {
+                env_path = path_str + ":" + env_path;
+              }
+            }
+            self.SetSearchPaths(searchPaths.begin(), searchPaths.end());
+            // update PATH environment variable to include new paths
+            setenv("PATH", env_path.c_str(), 1);
+          },
+          py::arg("paths"))
+      .def("GetAvailableDeviceAdapters", &CPluginManager::GetAvailableDeviceAdapters)
+      .def("GetDeviceAdapter",
+           static_cast<std::shared_ptr<LoadedDeviceAdapter> (CPluginManager::*)(
+               const std::string &)>(&CPluginManager::GetDeviceAdapter),
+           py::arg("moduleName"))
+      .def("UnloadPluginLibrary", &CPluginManager::UnloadPluginLibrary, py::arg("moduleName"));
+
+  ////////////////////// DeviceManager //////////////////////
+
+  py::class_<mm::DeviceManager, std::shared_ptr<mm::DeviceManager>>(m, "DeviceManager")
+      .def(py::init<>())
+      .def("__enter__", [](mm::DeviceManager &self) -> mm::DeviceManager & { return self; })
+      .def("__exit__",
+           [](mm::DeviceManager &self, py::args args) -> void { self.UnloadAllDevices(); })
+      .def(
+          "LoadDevice",
+          [](mm::DeviceManager &self, std::shared_ptr<LoadedDeviceAdapter> module,
+             const std::string &deviceName,
+             const std::string &label) -> std::shared_ptr<DeviceInstance> {
+            MockCMMCore mockCore;
+            mm::logging::internal::GenericLogger<mm::logging::EntryData> deviceLogger(0);
+            mm::logging::internal::GenericLogger<mm::logging::EntryData> coreLogger(0);
+            return self.LoadDevice(module, deviceName, label, &mockCore, deviceLogger, coreLogger);
+          },
+          py::arg("module"), py::arg("deviceName"), py::arg("label"),
+          py::return_value_policy::automatic,
+          "Load the specified device and assign a device label.")
+      .def("UnloadDevice", &mm::DeviceManager::UnloadDevice, py::arg("device"), "Unload a device.")
+      .def("UnloadAllDevices", &mm::DeviceManager::UnloadAllDevices, "Unload all devices.")
+      .def("GetDevice",
+           (std::shared_ptr<DeviceInstance>(mm::DeviceManager::*)(const char *) const) &
+               mm::DeviceManager::GetDevice,
+           py::arg("label"), "Get a device by label.")
+      // .def("GetDevice",
+      //      (std::shared_ptr<DeviceInstance>(mm::DeviceManager::*)(const MM::Device *) const) &
+      //          mm::DeviceManager::GetDevice,
+      //      py::arg("rawPtr"), "Get a device from a raw pointer to its MMDevice object.")
+      .def("GetCameraDevice",
+           (std::shared_ptr<CameraInstance>(mm::DeviceManager::*)(std::shared_ptr<DeviceInstance>)
+                const) &
+               mm::DeviceManager::GetDeviceOfType<CameraInstance>,
+           py::arg("device"), "Get a device by label, requiring a specific type.")
+      .def("GetStageDevice",
+           (std::shared_ptr<StageInstance>(mm::DeviceManager::*)(std::shared_ptr<DeviceInstance>)
+                const) &
+               mm::DeviceManager::GetDeviceOfType<StageInstance>,
+           py::arg("device"), "Get a device by label, requiring a specific type.")
+      .def(
+          "GetDeviceOfType",
+          [](const mm::DeviceManager &self, const std::string &label,
+             MM::DeviceType device_type) -> std::shared_ptr<DeviceInstance> {
+            switch (device_type) {
+              case MM::DeviceType::CameraDevice:
+                return self.GetDeviceOfType<CameraInstance>(label);
+              case MM::DeviceType::StageDevice:
+                return self.GetDeviceOfType<StageInstance>(label);
+              case MM::DeviceType::XYStageDevice:
+                return self.GetDeviceOfType<XYStageInstance>(label);
+              case MM::DeviceType::ShutterDevice:
+                return self.GetDeviceOfType<ShutterInstance>(label);
+              case MM::DeviceType::StateDevice:
+                return self.GetDeviceOfType<StateInstance>(label);
+              case MM::DeviceType::SerialDevice:
+                return self.GetDeviceOfType<SerialInstance>(label);
+              case MM::DeviceType::GenericDevice:
+                return self.GetDeviceOfType<GenericInstance>(label);
+              case MM::DeviceType::AutoFocusDevice:
+                return self.GetDeviceOfType<AutoFocusInstance>(label);
+              case MM::DeviceType::ImageProcessorDevice:
+                return self.GetDeviceOfType<ImageProcessorInstance>(label);
+              case MM::DeviceType::SignalIODevice:
+                return self.GetDeviceOfType<SignalIOInstance>(label);
+              case MM::DeviceType::MagnifierDevice:
+                return self.GetDeviceOfType<MagnifierInstance>(label);
+              case MM::DeviceType::SLMDevice:
+                return self.GetDeviceOfType<SLMInstance>(label);
+              case MM::DeviceType::HubDevice:
+                return self.GetDeviceOfType<HubInstance>(label);
+              case MM::DeviceType::GalvoDevice:
+                return self.GetDeviceOfType<GalvoInstance>(label);
+
+              default:
+                throw std::runtime_error("Unsupported device type");
+            }
+          },
+          py::arg("label"), py::arg("device_type"),
+          "Get a device by label, requiring a specific type.")
+
+      .def("GetDeviceList", &mm::DeviceManager::GetDeviceList, py::arg("t"),
+           "Get the labels of all loaded devices of a given type.")
+      .def("GetLoadedPeripherals", &mm::DeviceManager::GetLoadedPeripherals, py::arg("hubLabel"),
+           "Get the labels of all loaded peripherals of a hub device.")
+      .def("GetParentDevice", &mm::DeviceManager::GetParentDevice, py::arg("device"),
+           "Get the parent hub device of a peripheral.");
+
+  ////////////////////// DeviceAdapter (a.k.a. LoadedDeviceAdapter) //////////////////////
+
+  py::class_<LoadedDeviceAdapter, std::shared_ptr<LoadedDeviceAdapter>>(m, "LoadedDeviceAdapter")
+      .def(py::init<const std::string &, const std::string &>())
+      .def("GetName", &LoadedDeviceAdapter::GetName)
+      .def("GetAvailableDeviceNames", &LoadedDeviceAdapter::GetAvailableDeviceNames)
+      .def("GetDeviceDescription",
+           static_cast<std::string (LoadedDeviceAdapter::*)(const std::string &) const>(
+               &LoadedDeviceAdapter::GetDeviceDescription),
+           py::arg("deviceName"))
+      .def("LoadDevice", loadDevice_, py::arg("name"), py::arg("label"),
+           py::return_value_policy::automatic)
+      // the following methods simply call LoadDevice internally, but ensure
+      // that the return type is the correct DeviceInstance subclass
+      .def(
+          "load_camera",
+          [](LoadedDeviceAdapter &self, const std::string &name,
+             const std::string &label) -> std::shared_ptr<CameraInstance> {
+            auto device = loadDevice_(self, name, label);
+            std::shared_ptr<DeviceInstance> deviceHolder(device);
+            std::shared_ptr<CameraInstance> camera =
+                std::dynamic_pointer_cast<CameraInstance>(deviceHolder);
+            if (!camera) {
+              std::ostringstream msg;
+              msg << "'" << name << "' is not a CameraInstance";
+              PyErr_SetString(PyExc_TypeError, msg.str().c_str());
+              throw py::error_already_set();
+            }
+            return camera;
+          },
+          py::arg("name"), py::arg("label"), py::return_value_policy::automatic);
 
   // Various DeviceInstance subclasses
 
@@ -622,66 +776,4 @@ PYBIND11_MODULE(_pymmdevice, m) {
 
   bindDeviceInstance<HubInstance>(m, "HubInstance")
       .def("GetInstalledPeripheralNames", &HubInstance::GetInstalledPeripheralNames);
-
-  // PluginManager
-
-  py::class_<CPluginManager>(m, "PluginManager")
-      .def(py::init())
-      .def("GetSearchPaths", &CPluginManager::GetSearchPaths)
-      .def(
-          "SetSearchPaths",
-          [](CPluginManager &self, py::iterable paths) {
-            std::vector<std::string> searchPaths;
-            std::string env_path = getenv("PATH");
-            for (py::handle path : paths) {
-              std::string path_str = util::resolvePath(path);
-              searchPaths.push_back(path_str);
-              // add path to PATH environment variable if it's not already there
-              if (env_path.find(path_str) == std::string::npos) {
-                env_path = path_str + ":" + env_path;
-              }
-            }
-            self.SetSearchPaths(searchPaths.begin(), searchPaths.end());
-            // update PATH environment variable to include new paths
-            setenv("PATH", env_path.c_str(), 1);
-          },
-          py::arg("paths"))
-      .def("GetAvailableDeviceAdapters", &CPluginManager::GetAvailableDeviceAdapters)
-      .def("GetDeviceAdapter",
-           static_cast<std::shared_ptr<LoadedDeviceAdapter> (CPluginManager::*)(
-               const std::string &)>(&CPluginManager::GetDeviceAdapter),
-           py::arg("moduleName"))
-      .def("UnloadPluginLibrary", &CPluginManager::UnloadPluginLibrary, py::arg("moduleName"));
-
-  // DeviceAdapter (a.k.a. LoadedDeviceAdapter)
-
-  py::class_<LoadedDeviceAdapter, std::shared_ptr<LoadedDeviceAdapter>>(m, "LoadedDeviceAdapter")
-      .def(py::init<const std::string &, const std::string &>())
-      .def("get_name", &LoadedDeviceAdapter::GetName)
-      .def("get_available_device_names", &LoadedDeviceAdapter::GetAvailableDeviceNames)
-      .def("get_device_description",
-           static_cast<std::string (LoadedDeviceAdapter::*)(const std::string &) const>(
-               &LoadedDeviceAdapter::GetDeviceDescription),
-           py::arg("deviceName"))
-      .def("load_device", loadDeviceFunction, py::arg("name"), py::arg("label"),
-           py::return_value_policy::automatic)
-      // the following methods simply call load_device internally, but ensure
-      // that the return type is the correct DeviceInstance subclass
-      .def(
-          "load_camera",
-          [](LoadedDeviceAdapter &self, const std::string &name,
-             const std::string &label) -> std::shared_ptr<CameraInstance> {
-            auto device = loadDeviceFunction(self, name, label);
-            std::shared_ptr<DeviceInstance> deviceHolder(device);
-            std::shared_ptr<CameraInstance> camera =
-                std::dynamic_pointer_cast<CameraInstance>(deviceHolder);
-            if (!camera) {
-              std::ostringstream msg;
-              msg << "'" << name << "' is not a CameraInstance";
-              PyErr_SetString(PyExc_TypeError, msg.str().c_str());
-              throw py::error_already_set();
-            }
-            return camera;
-          },
-          py::arg("name"), py::arg("label"), py::return_value_policy::automatic);
 }
