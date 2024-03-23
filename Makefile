@@ -1,13 +1,13 @@
 BUILDDIR := $(shell ls -d build/cp3* | head -n 1)
 
-.PHONY: build clean install test stubs check
+.PHONY: build clean install test coverage stubs check
 
 build:
 	meson compile -C $(BUILDDIR)
 
 clean:
 	rm -rf build dist
-	rm -rf coverage.info coverage.xml
+	rm -rf coverage.info coverage.xml coverage_cpp.xml
 
 install:
 	make clean
@@ -15,7 +15,15 @@ install:
 
 test:
 	meson test -C $(BUILDDIR) --verbose
-	lcov --directory $(BUILDDIR) --capture --output-file coverage.info
+
+coverage:
+	rm -rf coverage coverage.xml coverage_cpp.xml
+	mkdir coverage
+	make test
+	gcovr --xml coverage_cpp.xml
+	gcovr --html-details -o coverage/index.html --exclude .venv
+	open coverage/index.html
+
 
 stubs:
 	pybind11-stubgen pymmdevice._pymmdevice -o src

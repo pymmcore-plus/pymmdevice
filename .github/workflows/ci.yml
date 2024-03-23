@@ -82,12 +82,15 @@ jobs:
           mmcore build-dev DemoCamera
 
       - name: 🧪 Run Tests
-        run: pytest --color=yes --cov --cov-report=xml --cov-report=term-missing
+        run: |
+          pytest --color=yes --cov --cov-report=xml --cov-report=term-missing
+          gcovr --xml coverage_cpp.xml
 
       - name: Coverage
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.xml,./coverage_cpp.xml
 
   deploy:
     name: Deploy
