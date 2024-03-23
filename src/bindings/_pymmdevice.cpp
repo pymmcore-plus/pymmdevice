@@ -5,7 +5,9 @@
 
 #include "AutoFocusInstance.h"
 #include "CameraInstance.h"
+#include "CoreUtils.h"
 #include "DeviceInstance.h"
+#include "DeviceManager.h"
 #include "GalvoInstance.h"
 #include "GenericInstance.h"
 #include "HubInstance.h"
@@ -107,6 +109,11 @@ auto loadDeviceFunction = [](LoadedDeviceAdapter &self, const std::string &name,
   return self.LoadDevice(&mockCore, name, label, deviceLogger, coreLogger);
 };
 
+std::string getErrorMessage(DeviceInstance *device, int errorCode) {
+  return "Error in device " + ToQuotedString(device->GetLabel()) + ": " +
+         device->GetErrorText(errorCode) + " (" + ToString(errorCode) + ")";
+}
+
 PYBIND11_MODULE(_pymmdevice, m) {
   // TODO: these are simply here for pybind11-stubgen ... but they don't work
   py::class_<MM::Device>(m, "Device");
@@ -114,6 +121,9 @@ PYBIND11_MODULE(_pymmdevice, m) {
   py::class_<PyDeviceInstance>(m, "DeviceInstance");
   py::class_<mm::logging::Logger>(m, "Logger");
   py::class_<DeleteDeviceFunction>(m, "Callable");
+  py::class_<MM::Core> core(m, "Core");
+
+  // Enums
 
   py::enum_<MM::DeviceType>(m, "DeviceType")
       .value("UnknownType", MM::DeviceType::UnknownType)
@@ -151,7 +161,11 @@ PYBIND11_MODULE(_pymmdevice, m) {
       .value("FocusDirectionTowardSample", MM::FocusDirection::FocusDirectionTowardSample)
       .value("FocusDirectionAwayFromSample", MM::FocusDirection::FocusDirectionAwayFromSample);
 
-  py::class_<MM::Core> core(m, "Core");
+  py::enum_<MM::PortType>(m, "PortType")
+      .value("InvalidPort", MM::PortType::InvalidPort)
+      .value("SerialPort", MM::PortType::SerialPort)
+      .value("USBPort", MM::PortType::USBPort)
+      .value("HIDPort", MM::PortType::HIDPort);
 
   // Various DeviceInstance subclasses
 
@@ -218,6 +232,7 @@ PYBIND11_MODULE(_pymmdevice, m) {
           py::arg("arg") = 0);
 
   /////////////////////// ShutterInstance ///////////////////////
+
   bindDeviceInstance<ShutterInstance>(m, "ShutterInstance")
       .def("SetOpen", &ShutterInstance::SetOpen, py::arg("open"))
       .def("GetOpen",
@@ -229,6 +244,7 @@ PYBIND11_MODULE(_pymmdevice, m) {
       .def("Fire", &ShutterInstance::Fire, py::arg("deltaT"));
 
   /////////////////////// StageInstance ///////////////////////
+
   bindDeviceInstance<StageInstance>(m, "StageInstance")
       .def("SetPositionUm", &StageInstance::SetPositionUm, py::arg("pos"))
       .def("SetRelativePositionUm", &StageInstance::SetRelativePositionUm, py::arg("d"))
@@ -286,6 +302,7 @@ PYBIND11_MODULE(_pymmdevice, m) {
            py::arg("nSlices"));
 
   /////////////////////// XYStageInstance ///////////////////////
+
   bindDeviceInstance<XYStageInstance>(m, "XYStageInstance")
       .def("SetPositionUm", &XYStageInstance::SetPositionUm, py::arg("x"), py::arg("y"))
       .def("SetRelativePositionUm", &XYStageInstance::SetRelativePositionUm, py::arg("dx"),
@@ -339,6 +356,7 @@ PYBIND11_MODULE(_pymmdevice, m) {
       .def("SendXYStageSequence", &XYStageInstance::SendXYStageSequence);
 
   /////////////////////// StateInstance ///////////////////////
+
   bindDeviceInstance<StateInstance>(m, "StateInstance")
       .def("SetPosition", py::overload_cast<long>(&StateInstance::SetPosition), py::arg("pos"))
       .def("SetPosition", py::overload_cast<const char *>(&StateInstance::SetPosition),
@@ -372,31 +390,235 @@ PYBIND11_MODULE(_pymmdevice, m) {
       });
 
   /////////////////////// SerialInstance ///////////////////////
-  bindDeviceInstance<SerialInstance>(m, "SerialInstance");
+
+  bindDeviceInstance<SerialInstance>(m, "SerialInstance")
+      .def("GetPortType", &SerialInstance::GetPortType)
+      .def("SetCommand", &SerialInstance::SetCommand, py::arg("command"), py::arg("term"))
+      // logic borrowed from MMCore.cpp
+      .def(
+          "GetAnswer",
+          [](SerialInstance &self, const std::string &term) {
+            if (term.empty())
+              throw py::value_error("Null or empty terminator; cannot delimit received message");
+
+            const int bufLen = 1024;
+            char answerBuf[bufLen];
+            int ret = self.GetAnswer(answerBuf, bufLen, term.c_str());
+            if (ret != DEVICE_OK) {
+              std::string errMsg = getErrorMessage(&self, ret);
+              throw std::runtime_error(errMsg);
+            }
+            return std::string(answerBuf);
+          },
+          py::arg("term"))
+      .def(
+          "Write",
+          [](SerialInstance &self, const std::string &data) {
+            int ret =
+                self.Write(reinterpret_cast<const unsigned char *>(data.data()), data.size());
+            if (ret != DEVICE_OK) {
+              std::string errMsg = getErrorMessage(&self, ret);
+              throw std::runtime_error(errMsg);
+            }
+            return ret;
+          },
+          py::arg("data"))
+      .def("Read",
+           [](SerialInstance &self) {
+             const int bufLen = 1024;
+             unsigned char answerBuf[bufLen];
+             unsigned long charsRead;
+             int ret = self.Read(answerBuf, bufLen, charsRead);
+             if (ret != DEVICE_OK) {
+               std::string errMsg = getErrorMessage(&self, ret);
+               throw std::runtime_error(errMsg);
+             }
+             std::vector<char> data;
+             data.resize(charsRead, 0);
+             if (charsRead > 0) std::memcpy(&(data[0]), answerBuf, charsRead);
+             return data;
+           })
+      .def("Purge", &SerialInstance::Purge);
 
   /////////////////////// GenericInstance ///////////////////////
+
   bindDeviceInstance<GenericInstance>(m, "GenericInstance");
+  // has no additional methods
 
   /////////////////////// AutoFocusInstance ///////////////////////
-  bindDeviceInstance<AutoFocusInstance>(m, "AutoFocusInstance");
+
+  bindDeviceInstance<AutoFocusInstance>(m, "AutoFocusInstance")
+      .def("SetContinuousFocusing", &AutoFocusInstance::SetContinuousFocusing, py::arg("state"))
+      .def("GetContinuousFocusing",
+           [](AutoFocusInstance &self) {
+             bool state;
+             self.GetContinuousFocusing(state);
+             return state;
+           })
+      .def("IsContinuousFocusLocked", &AutoFocusInstance::IsContinuousFocusLocked)
+      .def("FullFocus", &AutoFocusInstance::FullFocus)
+      .def("IncrementalFocus", &AutoFocusInstance::IncrementalFocus)
+      .def("GetLastFocusScore",
+           [](AutoFocusInstance &self) {
+             double score;
+             self.GetLastFocusScore(score);
+             return score;
+           })
+      .def("GetCurrentFocusScore",
+           [](AutoFocusInstance &self) {
+             double score;
+             self.GetCurrentFocusScore(score);
+             return score;
+           })
+      .def("AutoSetParameters", &AutoFocusInstance::AutoSetParameters)
+      .def("GetOffset",
+           [](AutoFocusInstance &self) {
+             double offset;
+             self.GetOffset(offset);
+             return offset;
+           })
+      .def("SetOffset", &AutoFocusInstance::SetOffset, py::arg("offset"));
 
   /////////////////////// ImageProcessorInstance ///////////////////////
-  bindDeviceInstance<ImageProcessorInstance>(m, "ImageProcessorInstance");
+
+  bindDeviceInstance<ImageProcessorInstance>(m, "ImageProcessorInstance")
+      .def(
+          "Process",
+          [](ImageProcessorInstance &self, unsigned char *buffer, int width, int height,
+             int byteDepth) {
+            PyErr_SetString(PyExc_NotImplementedError,
+                            "ImageProcessorInstance.Process is not implemented yet.");
+            throw py::error_already_set();
+          },
+          py::arg("buffer"), py::arg("width"), py::arg("height"), py::arg("byteDepth"));
 
   /////////////////////// SignalIOInstance ///////////////////////
-  bindDeviceInstance<SignalIOInstance>(m, "SignalIOInstance");
+
+  bindDeviceInstance<SignalIOInstance>(m, "SignalIOInstance")
+      .def("SetGateOpen", &SignalIOInstance::SetGateOpen, py::arg("open") = true)
+      .def("GetGateOpen",
+           [](SignalIOInstance &self) {
+             bool open;
+             self.GetGateOpen(open);
+             return open;
+           })
+      .def("SetSignal", &SignalIOInstance::SetSignal, py::arg("volts"))
+      .def("GetSignal",
+           [](SignalIOInstance &self) {
+             double volts;
+             self.GetSignal(volts);
+             return volts;
+           })
+      .def("GetLimits",
+           [](SignalIOInstance &self) {
+             double minVolts, maxVolts;
+             self.GetLimits(minVolts, maxVolts);
+             return std::make_pair(minVolts, maxVolts);
+           })
+      .def("IsDASequenceable",
+           [](SignalIOInstance &self) {
+             bool isSequenceable;
+             self.IsDASequenceable(isSequenceable);
+             return isSequenceable;
+           })
+      .def("GetDASequenceMaxLength",
+           [](SignalIOInstance &self) {
+             long nrEvents;
+             self.GetDASequenceMaxLength(nrEvents);
+             return nrEvents;
+           })
+      .def("StartDASequence", &SignalIOInstance::StartDASequence)
+      .def("StopDASequence", &SignalIOInstance::StopDASequence)
+      .def("ClearDASequence", &SignalIOInstance::ClearDASequence)
+      .def("AddToDASequence", &SignalIOInstance::AddToDASequence, py::arg("voltage"))
+      .def("SendDASequence", &SignalIOInstance::SendDASequence);
 
   /////////////////////// MagnifierInstance ///////////////////////
-  bindDeviceInstance<MagnifierInstance>(m, "MagnifierInstance");
+
+  bindDeviceInstance<MagnifierInstance>(m, "MagnifierInstance")
+      .def("GetMagnification", &MagnifierInstance::GetMagnification);
 
   /////////////////////// SLMInstance ///////////////////////
-  bindDeviceInstance<SLMInstance>(m, "SLMInstance");
+
+  bindDeviceInstance<SLMInstance>(m, "SLMInstance")
+      .def(
+          "SetImage",
+          [](SLMInstance &self, py::buffer b) {
+            PyErr_SetString(PyExc_NotImplementedError,
+                            "SLMInstance.SetImage is not implemented yet.");
+            throw py::error_already_set();
+          },
+          py::arg("pixels"))
+      .def("DisplayImage", &SLMInstance::DisplayImage)
+      .def("SetPixelsTo", py::overload_cast<unsigned char>(&SLMInstance::SetPixelsTo),
+           py::arg("intensity"))
+      .def("SetPixelsTo",
+           py::overload_cast<unsigned char, unsigned char, unsigned char>(
+               &SLMInstance::SetPixelsTo),
+           py::arg("red"), py::arg("green"), py::arg("blue"))
+      .def("SetExposure", &SLMInstance::SetExposure, py::arg("interval_ms"))
+      .def("GetExposure", &SLMInstance::GetExposure)
+      .def("GetWidth", &SLMInstance::GetWidth)
+      .def("GetHeight", &SLMInstance::GetHeight)
+      .def("GetNumberOfComponents", &SLMInstance::GetNumberOfComponents)
+      .def("GetBytesPerPixel", &SLMInstance::GetBytesPerPixel)
+      .def("IsSLMSequenceable",
+           [](SLMInstance &self) {
+             bool isSequenceable;
+             self.IsSLMSequenceable(isSequenceable);
+             return isSequenceable;
+           })
+      .def("GetSLMSequenceMaxLength",
+           [](SLMInstance &self) {
+             long nrEvents;
+             self.GetSLMSequenceMaxLength(nrEvents);
+             return nrEvents;
+           })
+      .def("StartSLMSequence", &SLMInstance::StartSLMSequence)
+      .def("StopSLMSequence", &SLMInstance::StopSLMSequence)
+      .def("ClearSLMSequence", &SLMInstance::ClearSLMSequence)
+      .def(
+          "AddToSLMSequence",
+          [](SLMInstance &self, py::buffer b) {
+            PyErr_SetString(PyExc_NotImplementedError,
+                            "SLMInstance.AddToSLMSequence is not implemented yet.");
+            throw py::error_already_set();
+          },
+          py::arg("pixels"))
+      .def("SendSLMSequence", &SLMInstance::SendSLMSequence);
 
   /////////////////////// GalvoInstance ///////////////////////
-  bindDeviceInstance<GalvoInstance>(m, "GalvoInstance");
+
+  bindDeviceInstance<GalvoInstance>(m, "GalvoInstance")
+      .def("PointAndFire", &GalvoInstance::PointAndFire, py::arg("x"), py::arg("y"),
+           py::arg("time_us"))
+      .def("SetSpotInterval", &GalvoInstance::SetSpotInterval, py::arg("pulseInterval_us"))
+      .def("SetPosition", &GalvoInstance::SetPosition, py::arg("x"), py::arg("y"))
+      .def("GetPosition",
+           [](GalvoInstance &self) {
+             double x, y;
+             self.GetPosition(x, y);
+             return std::make_pair(x, y);
+           })
+      .def("SetIlluminationState", &GalvoInstance::SetIlluminationState, py::arg("on"))
+      .def("GetXRange", &GalvoInstance::GetXRange)
+      .def("GetXMinimum", &GalvoInstance::GetXMinimum)
+      .def("GetYRange", &GalvoInstance::GetYRange)
+      .def("GetYMinimum", &GalvoInstance::GetYMinimum)
+      .def("AddPolygonVertex", &GalvoInstance::AddPolygonVertex, py::arg("polygonIndex"),
+           py::arg("x"), py::arg("y"))
+      .def("DeletePolygons", &GalvoInstance::DeletePolygons)
+      .def("RunSequence", &GalvoInstance::RunSequence)
+      .def("LoadPolygons", &GalvoInstance::LoadPolygons)
+      .def("SetPolygonRepetitions", &GalvoInstance::SetPolygonRepetitions, py::arg("repetitions"))
+      .def("RunPolygons", &GalvoInstance::RunPolygons)
+      .def("StopSequence", &GalvoInstance::StopSequence)
+      .def("GetChannel", &GalvoInstance::GetChannel);
 
   /////////////////////// HubInstance ///////////////////////
-  bindDeviceInstance<HubInstance>(m, "HubInstance");
+
+  bindDeviceInstance<HubInstance>(m, "HubInstance")
+      .def("GetInstalledPeripheralNames", &HubInstance::GetInstalledPeripheralNames);
 
   // PluginManager
 
