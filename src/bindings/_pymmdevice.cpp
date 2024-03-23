@@ -33,10 +33,7 @@ class MockCMMCore : public CMMCore {
   // You might not need to implement anything if LoadDevice truly does nothing with it
 };
 
-class StubDeviceInstance {};
-
-// Define a holder type for DeviceInstance
-using DeviceInstanceHolder = std::shared_ptr<DeviceInstance>;
+class PyDeviceInstance {};
 
 template <typename DType>
 py::class_<DType, std::shared_ptr<DType>> bindDeviceInstance(py::module_ &m,
@@ -111,6 +108,13 @@ auto loadDeviceFunction = [](LoadedDeviceAdapter &self, const std::string &name,
 };
 
 PYBIND11_MODULE(_pymmdevice, m) {
+  // TODO: these are simply here for pybind11-stubgen ... but they don't work
+  py::class_<MM::Device>(m, "Device");
+  py::class_<MockCMMCore>(m, "MockCMMCore");
+  py::class_<PyDeviceInstance>(m, "DeviceInstance");
+  py::class_<mm::logging::Logger>(m, "Logger");
+  py::class_<DeleteDeviceFunction>(m, "Callable");
+
   py::enum_<MM::DeviceType>(m, "DeviceType")
       .value("UnknownType", MM::DeviceType::UnknownType)
       .value("AnyType", MM::DeviceType::AnyType)
@@ -143,13 +147,6 @@ PYBIND11_MODULE(_pymmdevice, m) {
       .value("Integer", MM::PropertyType::Integer);
 
   py::class_<MM::Core> core(m, "Core");
-
-  // TODO: these are simply here for pybind11-stubgen ... but they don't work
-  py::class_<MM::Device>(m, "Device");
-  py::class_<MockCMMCore>(m, "MockCMMCore");
-  py::class_<StubDeviceInstance>(m, "DeviceInstance");
-  py::class_<mm::logging::Logger>(m, "Logger");
-  py::class_<DeleteDeviceFunction>(m, "Callable");
 
   // Various DeviceInstance subclasses
 

@@ -1,6 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import pytest
 
 import pymmdevice as pmmd
+
+if TYPE_CHECKING:
+    from .conftest import Di
 
 
 def _getenv(varname: str) -> str:
@@ -45,3 +52,9 @@ def test_global_pm(mm_lib_dir: str) -> None:
     assert isinstance(pm.get_device_adapter("DemoCamera"), pmmd.LoadedDeviceAdapter)
 
     pm.unload_plugin_library("DemoCamera")
+
+
+def test_all_devices(pm: pmmd.PluginManager, device_info: Di) -> None:
+    module = pm.GetDeviceAdapter(device_info.library)
+    with module.load_device(device_info.name, f"My{device_info.name}") as dev:
+        assert dev
