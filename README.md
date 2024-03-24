@@ -33,7 +33,31 @@ and caution is advised.  Here be dragons.
 ## Installation
 
 ```sh
-pip install pymmdevice
+pip install git+https://github.com/pymmcore-plus/pymmdevice.git
+```
+
+## Usage
+
+```python
+import numpy as np
+
+import pymmdevice as pmmd
+
+pm = pmmd.PluginManager()
+lib_dir = (
+    "/Users/talley/Library/Application Support/pymmcore-plus/mm/Micro-Manager-80d5ac1"
+)
+pm.SetSearchPaths([lib_dir])
+module = pm.GetDeviceAdapter("DemoCamera")
+assert "DCam" in module.GetAvailableDeviceNames()
+
+with module.load_camera("DCam", "MyCamera") as cam:
+    cam.SetBinning(2)
+    print(cam.GetExposure())
+    cam.SnapImage()
+    img = cam.GetImageArray()
+    assert isinstance(img, np.ndarray)
+    assert img.shape == (256, 256)
 ```
 
 ## Development
