@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
@@ -58,3 +59,9 @@ def test_all_devices(pm: pmmd.PluginManager, device_info: Di) -> None:
     module = pm.GetDeviceAdapter(device_info.library)
     with module.LoadDevice(device_info.name, f"My{device_info.name}") as dev:
         assert dev
+
+
+def test_loaded_module_from_file(mm_lib_dir: str) -> None:
+    democam_file = sorted(Path(mm_lib_dir).glob("libmmgr_dal_DemoCamera"))[0]
+    module = pmmd.LoadedDeviceAdapter.from_file(str(democam_file))
+    assert module.LoadDevice("DCam", "MyDemoCamera").GetName() == "DCam"

@@ -118,11 +118,16 @@ std::string getErrorMessage(DeviceInstance *device, int errorCode) {
          device->GetErrorText(errorCode) + " (" + ToString(errorCode) + ")";
 }
 
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
 PYBIND11_MODULE(_pymmdevice, m) {
   // define module level attribute for DEVICE_INTERFACE_VERSION
   m.attr("DEVICE_INTERFACE_VERSION") = DEVICE_INTERFACE_VERSION;
 
   // TODO: these are simply here for pybind11-stubgen ... but they don't work
+  py::class_<MMThreadLock, std::shared_ptr<MMThreadLock>>(m, "MMThreadLock");
   py::class_<MM::Device>(m, "Device");
   py::class_<MockCMMCore>(m, "MockCMMCore");
   py::class_<PyDeviceInstance>(m, "DeviceInstance");
@@ -285,19 +290,101 @@ PYBIND11_MODULE(_pymmdevice, m) {
           py::arg("label"), py::arg("device_type"),
           "Get a device by label, requiring a specific type.")
 
-      .def("GetDeviceList", &mm::DeviceManager::GetDeviceList, py::arg("t"),
+      .def("GetDeviceList", &mm::DeviceManager::GetDeviceList,
+           py::arg("t") = MM::DeviceType::AnyType,
            "Get the labels of all loaded devices of a given type.")
       .def("GetLoadedPeripherals", &mm::DeviceManager::GetLoadedPeripherals, py::arg("hubLabel"),
            "Get the labels of all loaded peripherals of a hub device.")
-      .def("GetParentDevice", &mm::DeviceManager::GetParentDevice, py::arg("device"),
-           "Get the parent hub device of a peripheral.");
+      // FIXME: stupid dumb dumb workaround for fact that we don't have real subclasses yet.
+      .def("GetParentDevice",
+           [](mm::DeviceManager &self, std::shared_ptr<StageInstance> device) {
+             return self.GetParentDevice(device);
+           })
+      .def("GetParentDevice",
+           [](mm::DeviceManager &self, std::shared_ptr<HubInstance> device) {
+             return self.GetParentDevice(device);
+           })
+      .def("GetParentDevice",
+           [](mm::DeviceManager &self, std::shared_ptr<CameraInstance> device) {
+             return self.GetParentDevice(device);
+           })
+      .def("GetParentDevice",
+           [](mm::DeviceManager &self, std::shared_ptr<XYStageInstance> device) {
+             return self.GetParentDevice(device);
+           })
+      .def("GetParentDevice",
+           [](mm::DeviceManager &self, std::shared_ptr<ImageProcessorInstance> device) {
+             return self.GetParentDevice(device);
+           })
+      .def("GetParentDevice",
+           [](mm::DeviceManager &self, std::shared_ptr<MagnifierInstance> device) {
+             return self.GetParentDevice(device);
+           })
+      .def("GetParentDevice",
+           [](mm::DeviceManager &self, std::shared_ptr<SignalIOInstance> device) {
+             return self.GetParentDevice(device);
+           })
+      .def("GetParentDevice",
+           [](mm::DeviceManager &self, std::shared_ptr<ShutterInstance> device) {
+             return self.GetParentDevice(device);
+           })
+      .def("GetParentDevice",
+           [](mm::DeviceManager &self, std::shared_ptr<AutoFocusInstance> device) {
+             return self.GetParentDevice(device);
+           })
+      .def("GetParentDevice",
+           [](mm::DeviceManager &self, std::shared_ptr<StateInstance> device) {
+             return self.GetParentDevice(device);
+           })
+      .def("GetParentDevice", [](mm::DeviceManager &self, std::shared_ptr<GalvoInstance> device) {
+        return self.GetParentDevice(device);
+      });
 
   ////////////////////// DeviceAdapter (a.k.a. LoadedDeviceAdapter) //////////////////////
 
   py::class_<LoadedDeviceAdapter, std::shared_ptr<LoadedDeviceAdapter>>(m, "LoadedDeviceAdapter")
       .def(py::init<const std::string &, const std::string &>())
+      // @classmethod from_file
+      .def_static(
+          "from_file",
+          [](const std::string &filename,
+             const std::string &name) -> std::shared_ptr<LoadedDeviceAdapter> {
+            // if name is empty, use the filename without the libmmgr_dal_ prefix and without a
+            // suffix
+            std::string processedName;
+            if (name.empty()) {
+              std::string prefix = "libmmgr_dal_";
+              processedName = filename;
+
+              // Split on the last file path separator and take the last name
+              size_t pos1 = processedName.find_last_of("/\\");
+              if (pos1 != std::string::npos) {
+                processedName = processedName.substr(pos1 + 1);
+              }
+
+              // Remove prefix if it exists
+              if (processedName.find(prefix) == 0) {
+                processedName = processedName.substr(prefix.size());
+              }
+
+              // Split on the first period and take everything to the left
+              size_t pos = processedName.find(".");
+              if (pos != std::string::npos) {
+                processedName = processedName.substr(0, pos);
+              }
+            } else {
+              processedName = name;
+            }
+            std::cout << "processedName: " << processedName << std::endl;
+            return std::make_shared<LoadedDeviceAdapter>(processedName, filename);
+          },
+          py::arg("filename"), py::arg("moduleName") = std::string())
+      .def("Unload", &LoadedDeviceAdapter::Unload)
       .def("GetName", &LoadedDeviceAdapter::GetName)
+      .def("GetLock", &LoadedDeviceAdapter::GetLock, py::return_value_policy::reference)
       .def("GetAvailableDeviceNames", &LoadedDeviceAdapter::GetAvailableDeviceNames)
+      .def("GetAdvertisedDeviceType", &LoadedDeviceAdapter::GetAdvertisedDeviceType,
+           py::arg("deviceName"))
       .def("GetDeviceDescription",
            static_cast<std::string (LoadedDeviceAdapter::*)(const std::string &) const>(
                &LoadedDeviceAdapter::GetDeviceDescription),
