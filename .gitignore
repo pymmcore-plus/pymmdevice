@@ -112,3 +112,4 @@ ENV/
 .vscode/
 .idea/
 
+notes.cpp

@@ -15,7 +15,7 @@ namespace util {
  * @return The NumPy array representing the buffer.
  * @throws std::runtime_error if the bytes per pixel is unsupported.
  */
-py::array bufferToNumpy(const unsigned char *buffer, unsigned int height, unsigned int width,
+py::array bufferToNumpy(const unsigned char* buffer, unsigned int height, unsigned int width,
                         unsigned int bytesPerPixel) {
   py::dtype dtype;
   if (bytesPerPixel == 1) {

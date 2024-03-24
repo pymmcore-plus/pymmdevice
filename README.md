@@ -8,27 +8,21 @@
 
 Direct, low-level control of Micro-Manager device adapters in Python.
 
-## Rationale
-
-For most use cases, if you want to use Micro-Manager devices directly in Python,
-you will install [`pymmcore`](https://github.com/micro-manager/pymmcore)
+If you want to use Micro-Manager devices directly in Python,
+you should install [`pymmcore`](https://github.com/micro-manager/pymmcore)
 (or [`pymmcore-plus`](https://github.com/pymmcore-plus/pymmcore-plus))
 and instantiate an instance of `pymmcore.CMMCore` (or
 `pymmcore_plus.CMMCorePlus`).  Then, to load a specific device adapter, you
-would call `loadDevice('MyLabel', 'ModuleName', 'DeviceName')`.  All control of
-the device is routed through the `CMMCore` instance, and is therefore subject to
-the `CMMCore` model and API.  This is a safe and robust way to do this.
+would call `loadDevice('MyLabel', 'ModuleName', 'DeviceName')`, and control
+it via the `CMMCore` instance.
 
-This library is an **experimental** lower-level wrapper around the MMDevice API that
-gives you *direct* control over device adapter libraries, as python wrappers around
-the various subclasses of
+This library is an **experimental** (read: broken) lower-level wrapper around
+the MMDevice API that gives you *direct* control over device adapter libraries,
+as python wrappers around the various subclasses of
 [`MMCore/Devices/DeviceInstance.h`](https://github.com/micro-manager/mmCoreAndDevices/tree/4441b057e65fed8914c58c33e64123b17eeb6b25/MMCore/Devices).
-This means that you could have nothing more than a single compiled device
-adapter (i.e. one of the `libmmgr_dal_` libraries that you find inside of the
-Micro-Manager directory) and control it from Python, without any restrictions of
-the intermediate CMMCore API.  This absolutely opens the possibility of using
-a device incorrectly, so an understanding of the MMDevice API is important,
-and caution is advised.  Here be dragons.
+This absolutely opens the possibility of using a device incorrectly, so an
+understanding of the MMDevice API is important, and caution is advised.  Here be
+dragons.
 
 ## Installation
 
@@ -53,7 +47,6 @@ assert "DCam" in module.GetAvailableDeviceNames()
 
 with module.load_camera("DCam", "MyCamera") as cam:
     cam.SetBinning(2)
-    print(cam.GetExposure())
     cam.SnapImage()
     img = cam.GetImageArray()
     assert isinstance(img, np.ndarray)
