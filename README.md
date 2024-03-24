@@ -10,14 +10,6 @@ Direct, low-level control of Micro-Manager device adapters in Python.
 
 ## Rationale
 
-Perhaps the most valuable asset of Micro-Manager is the vast
-library of device adapters that have been written over the years – including
-contributions from commercial vendors.  While new python packages arise
-from time to time with the goal of creating a fundamentally new device interface,
-they all suffer from the problem of limited device support (typically,
-they only implement the set of devices that the authors immediately need).  It
-is just super hard to recreate what Micro-Manager has built up over the years.
-
 For most use cases, if you want to use Micro-Manager devices directly in Python,
 you will install [`pymmcore`](https://github.com/micro-manager/pymmcore)
 (or [`pymmcore-plus`](https://github.com/pymmcore-plus/pymmcore-plus))
@@ -36,7 +28,7 @@ adapter (i.e. one of the `libmmgr_dal_` libraries that you find inside of the
 Micro-Manager directory) and control it from Python, without any restrictions of
 the intermediate CMMCore API.  This absolutely opens the possibility of using
 a device incorrectly, so an understanding of the MMDevice API is important,
-and caution is advised.
+and caution is advised.  Here be dragons.
 
 ## Installation
 
