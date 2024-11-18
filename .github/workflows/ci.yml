@@ -87,7 +87,7 @@ jobs:
           gcovr --xml coverage_cpp.xml
 
       - name: Coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml,./coverage_cpp.xml
