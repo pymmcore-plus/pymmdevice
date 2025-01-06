@@ -6,11 +6,11 @@ import numpy
 import typing_extensions
 
 __all__ = [
+    "DEVICE_INTERFACE_VERSION",
     "AutoFocusInstance",
     "Callable",
     "CameraInstance",
     "Core",
-    "DEVICE_INTERFACE_VERSION",
     "Device",
     "DeviceDetectionStatus",
     "DeviceInstance",
