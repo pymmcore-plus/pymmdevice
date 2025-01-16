@@ -5,17 +5,17 @@ ci:
 
 repos:
   - repo: https://github.com/abravalheri/validate-pyproject
-    rev: v0.16
+    rev: v0.23
     hooks:
       - id: validate-pyproject
 
   - repo: https://github.com/crate-ci/typos
-    rev: v1.19.0
+    rev: dictgen-v0.3.1
     hooks:
       - id: typos
 
   - repo: https://github.com/pre-commit/mirrors-clang-format
-    rev: v18.1.2
+    rev: v19.1.6
     hooks:
       - id: clang-format
         args: ["--style={ BasedOnStyle: Google, ColumnLimit: 99 }", -i]
@@ -31,14 +31,14 @@ repos:
           - manual
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.3.4
+    rev: v0.8.6
     hooks:
       - id: ruff
         args: [--fix]
       - id: ruff-format
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.9.0
+    rev: v1.14.1
     hooks:
       - id: mypy
         files: "^src/"
